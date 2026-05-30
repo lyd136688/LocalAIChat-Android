@@ -48,3 +48,8 @@ fun parseAgentFromJson(json: String, saveDir: String): AgentInfo? {
 suspend fun parseAgentFromBrowserPage(pageUrl: String, saveDir: String): AgentInfo? {
     return downloadAgentFromUrl(pageUrl, saveDir)
 }
+// 重新加载本地所有Agent
+fun reloadLocalAgents(folderPath: String) {
+    agentList.clear()
+    loadLocalAgents(folderPath)
+}
