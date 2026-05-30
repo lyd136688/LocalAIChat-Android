@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">本地AI助手</string>
+    <string name="tab_chat">聊天</string>
+    <string name="tab_model">模型</string>
+    <string name="tab_agent">Agent</string>
+    <string name="tab_history">记忆</string>
+    <string name="tab_setting">设置</string>
+</resources>
+
