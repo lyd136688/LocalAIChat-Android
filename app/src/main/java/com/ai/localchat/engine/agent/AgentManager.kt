@@ -1,66 +1,50 @@
-package com.ai.localchat.engine.agent
-
-import java.io.File
-import com.google.gson.Gson
-
-object AgentManager {
-    private val agentList = mutableListOf<AgentInfo>()
-    private var currentAgent: AgentInfo? = null
-    private val gson = Gson()
-
-    // 加载本地所有Agent配置文件
-    fun loadLocalAgents(folderPath: String) {
-        val dir = File(folderPath)
-        if (!dir.exists()) dir.mkdirs()
+// 从任意URL下载并解析Agent
+suspend fun downloadAgentFromUrl(url: String, saveDir: String): AgentInfo? {
+    return try {
+        val request = Request.Builder()
+            .url(url)
+            .build()
         
-        // 创建默认Agent配置（如果没有任何Agent）
-        if (dir.listFiles()?.isEmpty() == true) {
-            createDefaultAgent(folderPath)
-        }
+        val response = httpClient.newCall(request).execute()
+        if (!response.isSuccessful) return null
         
-        dir.listFiles()?.forEach { file ->
-            if (file.name.endsWith(".json")) {
-                try {
-                    val json = file.readText()
-                    val agent = gson.fromJson(json, AgentInfo::class.java)
-                    agentList.add(agent)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-        
-        // 默认选中第一个Agent
-        if (agentList.isNotEmpty()) currentAgent = agentList.first()
+        val json = response.body?.string() ?: return null
+        return parseAgentFromJson(json, saveDir)
+    } catch (e: Exception) {
+        Log.e(TAG, "从URL下载Agent失败", e)
+        null
     }
-
-    // 创建默认通用助手Agent
-    private fun createDefaultAgent(folderPath: String) {
-        val defaultAgent = AgentInfo(
-            agentName = "通用助手",
-            agentDesc = "日常问答、图文解析",
-            promptTemplate = "你是本地AI助手，请用中文简洁回答用户问题：{{userInput}}",
-            isEnable = true
-        )
-        
-        val json = gson.toJson(defaultAgent)
-        val file = File(folderPath, "default_agent.json")
-        file.writeText(json)
-    }
-
-    // 切换Agent
-    fun switchAgent(name: String): Boolean {
-        currentAgent = agentList.find { it.agentName == name }
-        return currentAgent != null
-    }
-
-    // 拼接Agent提示词 + 用户输入
-    fun buildPrompt(userInput: String): String {
-        val agent = currentAgent ?: return userInput
-        return agent.promptTemplate.replace("{{userInput}}", userInput)
-    }
-
-    fun getCurrentAgent(): AgentInfo? = currentAgent
-    fun getAllAgents(): List<AgentInfo> = agentList
 }
 
+// 从JSON字符串解析并保存Agent
+fun parseAgentFromJson(json: String, saveDir: String): AgentInfo? {
+    return try {
+        // 智能提取JSON（处理大模型输出的带额外内容的JSON）
+        val jsonStart = json.indexOf("{")
+        val jsonEnd = json.lastIndexOf("}") + 1
+        if (jsonStart == -1 || jsonEnd == 0) return null
+        
+        val cleanJson = json.substring(jsonStart, jsonEnd)
+        val agent = gson.fromJson(cleanJson, AgentInfo::class.java)
+        
+        // 验证Agent有效性
+        if (agent.agentName.isBlank() || agent.promptTemplate.isBlank()) return null
+        
+        // 保存到本地
+        val file = File(saveDir, "${agent.agentName.replace(" ", "_")}.json")
+        file.writeText(cleanJson)
+        
+        // 添加到本地列表
+        agentList.add(agent)
+        Log.d(TAG, "Agent ${agent.agentName} 解析并保存成功")
+        agent
+    } catch (e: Exception) {
+        Log.e(TAG, "解析Agent失败", e)
+        null
+    }
+}
+
+// 从内置浏览器获取当前页面内容并尝试解析Agent
+suspend fun parseAgentFromBrowserPage(pageUrl: String, saveDir: String): AgentInfo? {
+    return downloadAgentFromUrl(pageUrl, saveDir)
+}
