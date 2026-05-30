@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ai.localchat">
 
-    <!-- 网络权限：下载量化模型 -->
+    <!-- 网络权限：下载量化模型、Agent -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 存储权限：读写模型、对话记录、多媒体 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -32,6 +32,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 在这里添加内置浏览器Activity注册 -->
+        <activity
+            android:name=".core.browser.BrowserActivity"
+            android:exported="false"
+            android:label="内置浏览器" />
+
     </application>
 
 </manifest>
+
