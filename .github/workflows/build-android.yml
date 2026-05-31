@@ -93,7 +93,7 @@ jobs:
         echo "所有架构的libllama.so编译完成"
 
     - name: Generate Gradle Wrapper
-      run: gradle wrapper --gradle-version 8.7
+      run: gradle wrapper --gradle-version 8.5
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
