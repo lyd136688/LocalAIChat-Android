@@ -2,18 +2,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 基础权限声明（可根据你的项目添加/修改） -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        <!-- 使用系统自带图标，无需自建mipmap图标 -->
+        android:icon="@android:drawable/ic_menu_app"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LocalAIChat">
-        
+        <!-- 使用系统自带主题，无需自建styles主题文件 -->
+        android:theme="@android:style/Theme.NoTitleBar">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
