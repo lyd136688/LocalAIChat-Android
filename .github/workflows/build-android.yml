@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # 增加编译超时时间
+    timeout-minutes: 45
 
     steps:
     - name: Checkout code
@@ -62,14 +62,27 @@ jobs:
           # 编译
           make -j$(nproc) llama
           
-          # 复制编译好的库文件到jniLibs目录
-          cp libllama.so ../../app/src/main/jniLibs/${ARCH}/
+          # 查找并复制编译好的库文件（支持新旧两种文件名）
+          if [ -f "bin/libllama.so.1" ]; then
+            cp bin/libllama.so.1 ../../app/src/main/jniLibs/${ARCH}/libllama.so
+            echo "✅ 找到新版本库文件 libllama.so.1"
+          elif [ -f "bin/libllama.so" ]; then
+            cp bin/libllama.so ../../app/src/main/jniLibs/${ARCH}/
+            echo "✅ 找到旧版本库文件 libllama.so"
+          elif [ -f "libllama.so" ]; then
+            cp libllama.so ../../app/src/main/jniLibs/${ARCH}/
+            echo "✅ 找到根目录下的库文件 libllama.so"
+          else
+            echo "❌ 错误：在任何位置都找不到libllama.so文件"
+            ls -la bin/
+            exit 1
+          fi
           
           # 清理临时文件
           cd ..
           rm -rf build-android-${ARCH}
           
-          echo "✅ $ARCH 架构编译成功"
+          echo "✅ $ARCH 架构编译并安装成功"
         done
         
         # 清理llama.cpp源码
