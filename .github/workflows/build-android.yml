@@ -34,21 +34,21 @@ jobs:
         mkdir -p app/src/main/jniLibs/arm64-v8a
         mkdir -p app/src/main/jniLibs/armeabi-v7a
         mkdir -p app/src/main/jniLibs/x86_64
-        
+
         # 克隆llama.cpp最新源码
         echo "正在克隆llama.cpp最新源码..."
         git clone --depth 1 https://github.com/ggml-org/llama.cpp.git
         cd llama.cpp
-        
+
         # 定义需要编译的架构列表
         ARCHITECTURES=("arm64-v8a" "armeabi-v7a" "x86_64")
-        
+
         # 循环编译每个架构
         for ARCH in "${ARCHITECTURES[@]}"; do
           echo "正在编译 $ARCH 架构的libllama.so..."
           mkdir -p build-android-${ARCH}
           cd build-android-${ARCH}
-          
+
           # 配置CMake
           cmake \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
@@ -56,12 +56,13 @@ jobs:
             -DANDROID_PLATFORM=android-24 \
             -DBUILD_SHARED_LIBS=ON \
             -DGGML_OPENMP=OFF \
+            -DGGML_OPENBLAS=OFF \
             -DGGML_LLAMAFILE=OFF \
             ..
-          
+
           # 编译
           make -j$(nproc) llama
-          
+
           # 查找并复制编译好的库文件（支持新旧两种文件名）
           if [ -f "bin/libllama.so.1" ]; then
             cp bin/libllama.so.1 ../../app/src/main/jniLibs/${ARCH}/libllama.so
@@ -73,26 +74,29 @@ jobs:
             cp libllama.so ../../app/src/main/jniLibs/${ARCH}/
             echo "✅ 找到根目录下的库文件 libllama.so"
           else
-            echo "❌ 错误：在任何位置都找不到libllama.so文件"
+            echo "❌ 错误: 在任何位置都找不到libllama.so文件"
             ls -la bin/
             exit 1
           fi
-          
+
           # 清理临时文件
           cd ..
           rm -rf build-android-${ARCH}
-          
+
           echo "✅ $ARCH 架构编译并安装成功"
         done
-        
+
         # 清理llama.cpp源码
         cd ..
         rm -rf llama.cpp
-        
+
         echo "所有架构的libllama.so编译完成"
 
     - name: Generate Gradle Wrapper
-      run: gradle wrapper
+      run: gradle wrapper --gradle-version 8.7
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug
