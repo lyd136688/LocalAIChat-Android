@@ -1,43 +1,76 @@
-name: Build Android APK (Auto Download libllama.so)
+name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      # 自动下载最新版llama.cpp arm64-v8a库
-      - name: Download libllama.so (arm64-v8a)
-        run: |
-          mkdir -p app/src/main/jniLibs/arm64-v8a
-          wget -O llama-android.zip https://github.com/ggerganov/llama.cpp/releases/latest/download/llama-b3888-android-arm64-v8a.zip
-          unzip -j llama-android.zip libllama.so -d app/src/main/jniLibs/arm64-v8a/
-          rm llama-android.zip
-
-      # 自动生成gradlew并赋予执行权限（修复核心错误）
-      - name: Generate Gradle Wrapper
-        run: |
-          gradle wrapper --gradle-version 8.5
-          chmod +x gradlew
-
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Download libllama.so for all Android architectures
+      run: |
+        # 创建jniLibs目录结构
+        mkdir -p app/src/main/jniLibs/arm64-v8a
+        mkdir -p app/src/main/jniLibs/armeabi-v7a
+        mkdir -p app/src/main/jniLibs/x86_64
+        
+        # 获取llama.cpp最新版本号
+        echo "正在获取llama.cpp最新版本号..."
+        LATEST_VERSION=$(curl -s --retry 3 --retry-delay 2 https://api.github.com/repos/ggml-org/llama.cpp/releases/latest | grep -o '"tag_name": ".*"' | cut -d'"' -f4)
+        
+        if [ -z "$LATEST_VERSION" ]; then
+          echo "错误：无法获取llama.cpp最新版本号"
+          exit 1
+        fi
+        
+        echo "llama.cpp最新版本: $LATEST_VERSION"
+        
+        # 定义需要下载的架构列表
+        ARCHITECTURES=("arm64-v8a" "armeabi-v7a" "x86_64")
+        
+        # 循环下载每个架构的库文件
+        for ARCH in "${ARCHITECTURES[@]}"; do
+          echo "正在下载 $ARCH 架构的libllama.so..."
+          DOWNLOAD_URL="https://github.com/ggml-org/llama.cpp/releases/download/${LATEST_VERSION}/llama-${LATEST_VERSION}-android-${ARCH}.zip"
+          
+          if curl -L --retry 3 --retry-delay 2 -o "llama-${ARCH}.zip" "$DOWNLOAD_URL"; then
+            unzip -o "llama-${ARCH}.zip" -d "llama-${ARCH}"
+            cp "llama-${ARCH}/libllama.so" "app/src/main/jniLibs/${ARCH}/"
+            rm -rf "llama-${ARCH}.zip" "llama-${ARCH}"
+            echo "✅ $ARCH 架构下载并安装成功"
+          else
+            echo "❌ 错误：无法下载 $ARCH 架构的libllama.so"
+            echo "下载链接: $DOWNLOAD_URL"
+            exit 1
+          fi
+        done
+        
+        echo "所有架构的libllama.so下载完成"
+        
+    - name: Generate Gradle Wrapper
+      run: gradle wrapper
+      
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+      
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
 
