@@ -17,7 +17,7 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // 关键修复：Room注解处理器配置
+        // Room schema 配置
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
@@ -64,13 +64,13 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.4"
     debugImplementation "androidx.compose.ui:ui-tooling:1.5.4"
 
-    // Room 数据库（关键修复：兼容compileSdk 34的版本）
-    def room_version = "2.6.1"
+    // Room 数据库（关键修复：降级为兼容稳定版 2.5.2）
+    def room_version = "2.5.2"
     implementation "androidx.room:room-runtime:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
 
-    // Gson（适配你的AgentLearner序列化逻辑）
+    // Gson
     implementation 'com.google.code.gson:gson:2.10.1'
 
     // 测试依赖
