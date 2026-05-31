@@ -36,6 +36,9 @@ jobs:
           find . -name "libllama.so" -exec cp {} ../../app/src/main/jniLibs/arm64-v8a/ \;
           cd ../..
 
+      - name: Clean Gradle cache
+        run: ./gradlew clean
+
       - name: Make gradlew executable
         run: chmod +x gradlew
 
@@ -47,7 +50,4 @@ jobs:
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Complete job
-        run: echo "Build finished"
 
