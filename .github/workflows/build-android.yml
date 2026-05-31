@@ -46,7 +46,7 @@ jobs:
             -DGGML_OPENMP=OFF \
             -DGGML_OPENBLAS=OFF \
             -DGGML_LLAMAFILE=OFF \
-            # 天玑9300+ ARMv9架构优化
+            # 天玑9300+ ARMv9架构优化（修复参数格式，补全所有 `-D` 前缀）
             -DGGML_ARM_V9=ON \
             -DGGML_NEON=ON \
             -DGGML_FP16=ON \
