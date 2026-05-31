@@ -2,17 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ai.localchat">
 
-    <!-- 网络权限：下载量化模型、Agent 通信 -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- 存储权限：读写模型、对话记录、多媒体 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         android:maxSdkVersion="30" />
-    <!-- 媒体权限：图片、视频 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <!-- 后台服务权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
@@ -33,7 +29,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 内置浏览器 Activity 注册 -->
         <activity
             android:name=".core.browser.BrowserActivity"
             android:exported="false"
