@@ -98,7 +98,7 @@ jobs:
         gradle-version: 8.7
         cache-read-only: false
 
-    - name: Build Debug APK
+    - name: Build Debug APK--info --stacktrace
       run: gradle assembleDebug
 
     - name: Upload APK
