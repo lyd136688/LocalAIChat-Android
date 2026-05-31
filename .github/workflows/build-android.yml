@@ -49,16 +49,22 @@ jobs:
           cd build-android-${ARCH}
 
           # 配置CMake
-          cmake \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${ARCH} \
-            -DANDROID_PLATFORM=android-24 \
-            -DBUILD_SHARED_LIBS=ON \
-            -DGGML_OPENMP=OFF \
-            -DGGML_OPENBLAS=OFF \
-            -DGGML_LLAMAFILE=OFF \
-            ..
-
+            cmake \
+         -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
+         -DANDROID_ABI=${ARCH} \
+         -DANDROID_PLATFORM=android-24 \
+         -DBUILD_SHARED_LIBS=ON \
+         -DGGML_OPENMP=OFF \
+         -DGGML_OPENBLAS=OFF \
+         -DGGML_LLAMAFILE=OFF \
+        # 天玑9300+ ARMv9 架构专属优化
+         -DGGML_ARM_V9=ON \
+         -DGGML_NEON=ON \
+         -DGGML_FP16=ON \
+         -DGGML_FMA=ON \
+        # 开启NPU/QNN硬件加速
+         -DGGML_QNN=ON \
+         ..
           # 编译
           make -j$(nproc) llama
 
