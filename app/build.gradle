@@ -16,6 +16,13 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // 关键修复：Room注解处理器配置
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
+            }
+        }
     }
 
     buildTypes {
@@ -34,24 +41,22 @@ android {
         jvmTarget = '1.8'
     }
 
-    // 开启 Compose 编译（解决 @Composable 找不到问题）
     buildFeatures {
         compose true
     }
 
-    // Compose 编译器版本（和 Kotlin 1.9.0 严格匹配）
     composeOptions {
         kotlinCompilerExtensionVersion "1.5.3"
     }
 }
 
 dependencies {
-    // 基础 AndroidX 依赖
+    // 基础AndroidX
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'
 
-    // Jetpack Compose 全套依赖
+    // Jetpack Compose
     implementation "androidx.compose.ui:ui:1.5.4"
     implementation "androidx.compose.material:material:1.5.4"
     implementation "androidx.activity:activity-compose:1.8.2"
@@ -59,11 +64,14 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.4"
     debugImplementation "androidx.compose.ui:ui-tooling:1.5.4"
 
-    // Room 数据库依赖（和你的项目业务匹配）
+    // Room 数据库（关键修复：兼容compileSdk 34的版本）
     def room_version = "2.6.1"
     implementation "androidx.room:room-runtime:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
+
+    // Gson（适配你的AgentLearner序列化逻辑）
+    implementation 'com.google.code.gson:gson:2.10.1'
 
     // 测试依赖
     testImplementation 'junit:junit:4.13.2'
