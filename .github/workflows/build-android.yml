@@ -36,18 +36,20 @@ jobs:
           find . -name "libllama.so" -exec cp {} ../../app/src/main/jniLibs/arm64-v8a/ \;
           cd ../..
 
-      - name: Clean Gradle cache
-        run: ./gradlew clean
-
+      # 权限设置移到这里，在所有 gradle 命令之前
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      # 把 clean 和 build 合并成一步，减少命令次数
+      - name: Build Debug APK (with clean)
+        run: ./gradlew clean assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Complete job
+        run: echo "Build completed successfully"
 
