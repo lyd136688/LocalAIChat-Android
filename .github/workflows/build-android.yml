@@ -20,7 +20,6 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
     - name: Set up Android NDK
       uses: nttld/setup-ndk@v1
@@ -92,14 +91,15 @@ jobs:
 
         echo "所有架构的libllama.so编译完成"
 
-    - name: Generate Gradle Wrapper
-      run: gradle wrapper --gradle-version 8.5
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    # 👇 关键修改：使用官方Gradle Action，强制使用8.5版本
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: 8.5
+        cache-read-only: false
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug
+      run: gradle assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
