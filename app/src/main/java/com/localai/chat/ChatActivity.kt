@@ -3,11 +3,11 @@ package com.localai.chat
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.github.dhaval2404.imagepicker.ImagePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -56,13 +56,8 @@ class ChatActivity : AppCompatActivity() {
         }
 
         btnAttach.setOnClickListener {
-            ImagePicker.with(this)
-                .crop()
-                .compress(1024)
-                .maxResultSize(1080, 1080)
-                .createIntent { intent ->
-                    pickImageLauncher.launch(intent)
-                }
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            pickImageLauncher.launch(intent)
         }
 
         btnSend.setOnClickListener {
