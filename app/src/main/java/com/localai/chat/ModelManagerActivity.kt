@@ -3,6 +3,7 @@ package com.localai.chat
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.ListView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.io.File
 
@@ -28,6 +29,7 @@ class ModelManagerActivity : AppCompatActivity() {
             val selected = models[position]
             getSharedPreferences("app_config", MODE_PRIVATE).edit()
                 .putString("current_model", File(modelsDir, selected).absolutePath).apply()
+            Toast.makeText(this, "已选择模型: $selected", Toast.LENGTH_SHORT).show()
         }
     }
 }
