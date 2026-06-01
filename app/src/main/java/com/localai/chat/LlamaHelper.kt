@@ -1,25 +1,12 @@
 package com.localai.chat
 
 class LlamaHelper(private val modelPath: String) {
-    init {
-        System.loadLibrary("llama")
-    }
-
-    private external fun nativeLoadModel(path: String): Boolean
-    private external fun nativeGenerate(prompt: String): String
-    private external fun nativeUnloadModel()
-
-    private var loaded = false
-
+    // 临时版本：不加载任何 native 库，返回模拟回复
     fun generate(prompt: String): String {
-        if (!loaded) {
-            loaded = nativeLoadModel(modelPath)
-            if (!loaded) return "模型加载失败"
-        }
-        return nativeGenerate(prompt)
+        return "[模拟回复] 您说的是：$prompt\n（当前为演示模式，集成真实模型后生效）"
     }
 
-    protected fun finalize() {
-        if (loaded) nativeUnloadModel()
+    fun generateWithImage(imagePath: String, prompt: String): String {
+        return "[模拟回复] 收到图片：$imagePath\n问题：$prompt\n（图片识别需要多模态模型）"
     }
 }
