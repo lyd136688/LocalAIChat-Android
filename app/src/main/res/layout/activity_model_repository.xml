@@ -15,7 +15,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="输入模型ID (例如: Qwen/Qwen2-7B-Instruct-GGUF)" />
+            android:hint="输入模型名称 (例如: Qwen, Llama)" />
 
         <Button
             android:id="@+id/searchButton"
@@ -24,9 +24,17 @@
             android:text="搜索" />
     </LinearLayout>
 
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_marginTop="16dp">
 
         <LinearLayout
             android:id="@+id/resultsContainer"
