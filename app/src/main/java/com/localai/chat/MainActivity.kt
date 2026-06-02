@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity() {
         checkPermissions()
 
         btnSelectModel.setOnClickListener {
-            startActivity(Intent(this, ModelManagerActivity::class.java))
+            startActivity(Intent(this, ModelRepositoryActivity::class.java))
         }
         btnStartChat.setOnClickListener {
             startActivity(Intent(this, ChatActivity::class.java))
