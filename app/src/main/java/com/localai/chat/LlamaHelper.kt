@@ -1,7 +1,7 @@
 package com.localai.chat
 
 class LlamaHelper(private val modelPath: String) {
-    // 临时版本：不加载任何 native 库，返回模拟回复
+    // 模拟版本：不加载任何 native 库，返回固定回复
     fun generate(prompt: String): String {
         return "[模拟回复] 您说的是：$prompt\n（当前为演示模式，集成真实模型后生效）"
     }
