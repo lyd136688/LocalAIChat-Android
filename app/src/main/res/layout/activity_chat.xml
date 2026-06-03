@@ -24,14 +24,29 @@
             android:contentDescription="返回"
             app:tint="@color/text_primary" />
 
-        <Spinner
-            android:id="@+id/spinnerModel"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="16dp"
-            android:background="@drawable/bg_input"
-            android:padding="8dp" />
+            android:orientation="vertical"
+            android:layout_marginHorizontal="12dp">
+
+            <Spinner
+                android:id="@+id/spinnerModel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_input"
+                android:padding="6dp" />
+
+            <TextView
+                android:id="@+id/textBackend"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="后端: 自动选择"
+                android:textColor="@color/accent_primary"
+                android:textSize="11sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -96,3 +111,4 @@
     </LinearLayout>
 
 </LinearLayout>
+
