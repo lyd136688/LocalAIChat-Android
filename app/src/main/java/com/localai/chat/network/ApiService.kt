@@ -1,72 +1,70 @@
-// ✅ 修复后的代码
 package com.localai.chat.network
 
-import com.google.gson.GsonBuilder
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
-import java.util.concurrent.TimeUnit
 
 interface ApiService {
-    // 搜索模型列表
+    
     @GET("api/models")
-    suspend fun searchModels(@Query("search") query: String): List<ModelInfo>
+    suspend fun searchModels(
+        @Query("search") query: String,
+        @Query("limit") limit: Int = 20,
+        @Query("author") author: String? = null
+    ): List<ModelSearchResult>
     
-    // 获取模型文件列表
-    @GET("api/models/{modelId}/tree/main")
-    suspend fun getModelFiles(@Path("modelId") modelId: String): List<FileInfo>
-    
-    // 获取模型信息
     @GET("api/models/{modelId}")
-    suspend fun getModelInfo(@Path("modelId") modelId: String): ModelDetailInfo
+    suspend fun getModelInfo(
+        @Path("modelId") modelId: String
+    ): ModelDetail
+    
+    @GET("api/models/{modelId}/tree/main")
+    suspend fun getModelFiles(
+        @Path("modelId") modelId: String
+    ): List<ModelFile>
+    
+    @GET("api/models/{modelId}/siblings")
+    suspend fun getModelSiblings(
+        @Path("modelId") modelId: String
+    ): List<ModelSibling>
 }
 
-// 搜索结果模型
-data class ModelInfo(
+data class ModelSearchResult(
     val id: String,
-    val modelId: String? = null
+    val modelId: String,
+    val author: String,
+    val sha: String,
+    val lastModified: String,
+    val private: Boolean,
+    val disabled: Boolean,
+    val gated: String?,
+    val likes: Int,
+    val downloads: Int
 )
 
-// 文件信息模型
-data class FileInfo(
-    val path: String,
-    val size: Long?,
-    val type: String?
-)
-
-// 模型详情
-data class ModelDetailInfo(
+data class ModelDetail(
     val id: String,
-    val siblings: List<FileRef>? = null
+    val author: String,
+    val sha: String,
+    val lastModified: String,
+    val private: Boolean,
+    val disabled: Boolean,
+    val pipeline_tag: String?,
+    val tags: List<String>,
+    val downloads: Int,
+    val likes: Int,
+    val modelCard: String?
 )
 
-data class FileRef(
+data class ModelFile(
     val rfilename: String,
-    val size: Long?
+    val size: Long,
+    val blobId: String
 )
 
-object RetrofitClient {
-    private const val BASE_URL = "https://huggingface.co/"
-
-    val apiService: ApiService by lazy {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
-
-        val gson = GsonBuilder()
-            .setLenient()
-            .create()
-
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-            .create(ApiService::class.java)
-    }
-}
+data class ModelSibling(
+    val rfilename: String,
+    val size: Long,
+    val downloadUrl: String?
+)
 
