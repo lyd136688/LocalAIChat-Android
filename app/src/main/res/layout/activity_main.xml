@@ -1,33 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/background_dark">
 
-    <TextView
-        android:id="@+id/tv_status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="欢迎使用本地AI聊天"
-        android:textSize="18sp" />
-
-    <Button
-        android:id="@+id/btn_select_model"
+    <!-- Top Bar -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="选择模型" />
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:background="@color/background_card">
 
-    <Button
-        android:id="@+id/btn_start_chat"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="开始对话" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/btn_open_browser"
+        <ImageButton
+            android:id="@+id/btnMemory"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_memory"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="记忆中心"
+            app:tint="@color/text_secondary" />
+
+        <ImageButton
+            android:id="@+id/btnSettings"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_settings"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="设置"
+            app:tint="@color/text_secondary" />
+    </LinearLayout>
+
+    <!-- Fragment Container -->
+    <FrameLayout
+        android:id="@+id/fragmentContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="内置浏览器" />
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/background_card"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="@color/accent_primary"
+        app:itemTextColor="@color/accent_primary" />
 
 </LinearLayout>
