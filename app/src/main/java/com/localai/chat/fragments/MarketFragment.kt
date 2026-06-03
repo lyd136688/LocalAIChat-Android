@@ -19,6 +19,7 @@ import com.localai.chat.MyApplication
 import com.localai.chat.R
 import com.localai.chat.adapters.ModelListAdapter
 import com.localai.chat.data.models.ModelInfo
+import com.localai.chat.network.RetrofitClient
 import com.localai.chat.utils.HardwareDetector
 import kotlinx.coroutines.launch
 
@@ -32,20 +33,6 @@ class MarketFragment : Fragment() {
     private lateinit var modelAdapter: ModelListAdapter
     
     private var currentSource = "HuggingFace"
-    private val huggingFaceModels = listOf(
-        ModelInfo("meta-llama/Llama-2-7b-chat", "LLaMA-2-7B-Chat", "7B", "4.1GB", "Meta"),
-        ModelInfo("meta-llama/Llama-2-13b-chat", "LLaMA-2-13B-Chat", "13B", "7.9GB", "Meta"),
-        ModelInfo("Qwen/Qwen-7B-Chat", "Qwen-7B-Chat", "7B", "4.2GB", "Alibaba"),
-        ModelInfo("THUDM/chatglm3-6b", "ChatGLM3-6B", "6B", "3.6GB", "THUDM"),
-        ModelInfo("01-ai/Yi-6B-Chat", "Yi-6B-Chat", "6B", "3.5GB", "01.AI")
-    )
-    
-    private val modelScopeModels = listOf(
-        ModelInfo("damo/nlp_structbert_siamese-uie_chinese-base", "StructBERT", "Base", "400MB", "阿里达摩院"),
-        ModelInfo("baichuan-inc/Baichuan2-7B-Chat", "Baichuan2-7B", "7B", "4.1GB", "百川智能"),
-        ModelInfo("ZhipuAI/chatglm3-6b", "ChatGLM3-6B", "6B", "3.6GB", "智谱AI"),
-        ModelInfo("qwen/Qwen-7B-Chat", "Qwen-7B-Chat", "7B", "4.2GB", "通义千问")
-    )
     
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,7 +49,9 @@ class MarketFragment : Fragment() {
         setupSourceSelector()
         setupRecyclerView()
         updateRecommendation()
-        loadModels()
+        
+        // 默认加载热门模型
+        searchModels("")
     }
     
     private fun initViews(view: View) {
@@ -86,7 +75,7 @@ class MarketFragment : Fragment() {
         spinnerSource.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 currentSource = sources[position]
-                loadModels()
+                searchModels(editSearch.text.toString())
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
@@ -110,22 +99,79 @@ class MarketFragment : Fragment() {
         textRecommendation.text = "设备内存: ${ramGB}GB | 推荐模型: ${recommendedSize}"
     }
     
-    private fun loadModels() {
-        val models = if (currentSource == "HuggingFace") huggingFaceModels else modelScopeModels
-        modelAdapter.submitList(models)
+    private fun searchModels(query: String) {
+        lifecycleScope.launch {
+            try {
+                val models = if (currentSource == "HuggingFace") {
+                    searchHuggingFace(query)
+                } else {
+                    searchModelScope(query)
+                }
+                modelAdapter.submitList(models)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(requireContext(), "搜索失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                // 加载默认数据
+                modelAdapter.submitList(getDefaultModels())
+            }
+        }
     }
     
-    private fun searchModels(query: String) {
-        if (query.isEmpty()) {
-            loadModels()
-            return
+    private suspend fun searchHuggingFace(query: String): List<ModelInfo> {
+        return try {
+            val response = RetrofitClient.huggingFaceApi.searchModels(
+                query = query.ifEmpty { "llama" },
+                limit = 20
+            )
+            response.items.map { item ->
+                ModelInfo(
+                    id = item.modelId,
+                    displayName = item.modelId.substringAfterLast("/"),
+                    parameters = item.tags.find { it.endsWith("B") } ?: "Unknown",
+                    size = "Unknown",
+                    author = item.author ?: "Unknown"
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            getDefaultModels()
         }
-        val allModels = if (currentSource == "HuggingFace") huggingFaceModels else modelScopeModels
-        val filtered = allModels.filter { it.name.contains(query, ignoreCase = true) }
-        modelAdapter.submitList(filtered)
+    }
+    
+    private suspend fun searchModelScope(query: String): List<ModelInfo> {
+        return try {
+            val response = RetrofitClient.modelScopeApi.searchModelScopeModels(
+                query = query.ifEmpty { "llama" }
+            )
+            response.Data?.Models?.map { model ->
+                ModelInfo(
+                    id = model.ModelId,
+                    displayName = model.ModelName ?: model.ModelId,
+                    parameters = "Unknown",
+                    size = "Unknown",
+                    author = model.UserName ?: "Unknown"
+                )
+            } ?: getDefaultModels()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            getDefaultModels()
+        }
+    }
+    
+    private fun getDefaultModels(): List<ModelInfo> {
+        return listOf(
+            ModelInfo("meta-llama/Llama-2-7b-chat", "LLaMA-2-7B-Chat", "7B", "4.1GB", "Meta"),
+            ModelInfo("meta-llama/Llama-2-13b-chat", "LLaMA-2-13B-Chat", "13B", "7.9GB", "Meta"),
+            ModelInfo("Qwen/Qwen-7B-Chat", "Qwen-7B-Chat", "7B", "4.2GB", "Alibaba"),
+            ModelInfo("THUDM/chatglm3-6b", "ChatGLM3-6B", "6B", "3.6GB", "THUDM")
+        )
     }
     
     private fun downloadModel(model: ModelInfo) {
         Toast.makeText(requireContext(), "开始下载: ${model.displayName}", Toast.LENGTH_SHORT).show()
+        // 启动下载服务
+        val downloadUrl = RetrofitClient.getGgufDownloadUrl(model.id, currentSource)
+        // ... 启动DownloadService
     }
 }
+
