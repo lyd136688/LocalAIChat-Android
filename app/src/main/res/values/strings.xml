@@ -1,3 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">本地AI聊天</string>
+    <string name="app_name">LocalAIChat</string>
+    
+    <!-- Navigation -->
+    <string name="nav_service">服务</string>
+    <string name="nav_market">市场</string>
+    <string name="nav_chat">对话</string>
+    <string name="nav_workspace">工作区</string>
+    
+    <!-- Actions -->
+    <string name="action_settings">设置</string>
+    <string name="action_memory">记忆</string>
+    <string name="action_back">返回</string>
+    <string name="action_search">搜索</string>
+    <string name="action_download">下载</string>
+    <string name="action_send">发送</string>
+    <string name="action_attach">附件</string>
+    <string name="action_voice">语音</string>
+    
+    <!-- Labels -->
+    <string name="label_model_provider">模型提供商</string>
+    <string name="label_scene_config">场景配置</string>
+    <string name="label_local_model">本地模型</string>
+    <string name="label_workspace_memory">工作区记忆</string>
+    <string name="label_mcp_tools">MCP工具</string>
+    <string name="label_local_service">本地服务</string>
+    <string name="label_alpine_env">Alpine环境</string>
+    <string name="label_background_hide">后台隐藏</string>
+    <string name="label_alarm">闹钟设置</string>
+    
+    <!-- Memory -->
+    <string name="memory_short_term">短期记忆</string>
+    <string name="memory_long_term">长期记忆</string>
+    
+    <!-- Messages -->
+    <string name="msg_welcome">欢迎使用 LocalAIChat</string>
+    <string name="msg_start_chat">开始与本地AI对话</string>
+    <string name="msg_no_models">暂无下载的模型</string>
+    <string name="msg_downloading">正在下载...</string>
+    <string name="msg_download_complete">下载完成</string>
+    <string name="msg_download_failed">下载失败</string>
+    
+    <!-- Hints -->
+    <string name="hint_search_model">搜索模型...</string>
+    <string name="hint_input_message">输入消息...</string>
 </resources>
+
