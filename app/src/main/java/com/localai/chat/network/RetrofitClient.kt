@@ -9,16 +9,16 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     
     private const val HUGGINGFACE_BASE_URL = "https://huggingface.co/"
-    private const val MODELSCOPE_BASE_URL = "https://modelscope.cn/api/v1/"
+    private const val MODELSCOPE_BASE_URL = "https://www.modelscope.cn/"
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.BASIC
     }
     
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
     
@@ -37,11 +37,26 @@ object RetrofitClient {
     val huggingFaceApi: ApiService = huggingFaceRetrofit.create(ApiService::class.java)
     val modelScopeApi: ApiService = modelScopeRetrofit.create(ApiService::class.java)
     
+    /**
+     * 获取模型下载URL
+     */
     fun getDownloadUrl(modelId: String, fileName: String, source: String): String {
-        return if (source == "HuggingFace") {
-            "https://huggingface.co/$modelId/resolve/main/$fileName"
-        } else {
-            "https://modelscope.cn/models/$modelId/resolve/master/$fileName"
+        return when (source) {
+            "HuggingFace" -> "https://huggingface.co/$modelId/resolve/main/$fileName"
+            "ModelScope" -> "https://www.modelscope.cn/models/$modelId/resolve/master/$fileName"
+            else -> throw IllegalArgumentException("Unknown source: $source")
+        }
+    }
+    
+    /**
+     * 获取GGUF模型文件的下载URL
+     */
+    fun getGgufDownloadUrl(modelId: String, source: String): String {
+        return when (source) {
+            "HuggingFace" -> "https://huggingface.co/$modelId/resolve/main/ggml-model-q4_0.gguf"
+            "ModelScope" -> "https://www.modelscope.cn/models/$modelId/resolve/master/ggml-model-q4_0.gguf"
+            else -> throw IllegalArgumentException("Unknown source: $source")
         }
     }
 }
+
