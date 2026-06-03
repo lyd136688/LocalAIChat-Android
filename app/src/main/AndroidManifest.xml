@@ -43,6 +43,13 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
             
+        <receiver
+            android:name=".receivers.ModelLoadReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.localai.chat.MODEL_LOADED" />
+            </intent-filter>
+        </receiver>
+            
     </application>
 </manifest>
-
