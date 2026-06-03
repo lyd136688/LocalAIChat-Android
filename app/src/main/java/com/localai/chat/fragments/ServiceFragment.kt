@@ -35,3 +35,4 @@ class ServiceFragment : Fragment() {
         textModelInfo.text = "当前模型: 未加载\n内存使用: 0MB\n推理速度: 0 tokens/s"
     }
 }
+
