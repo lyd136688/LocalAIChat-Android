@@ -14,14 +14,15 @@
         android:textColor="@color/text_primary"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="16dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@drawable/bg_card"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
 
         <TextView
             android:id="@+id/textModelInfo"
@@ -29,8 +30,43 @@
             android:layout_height="wrap_content"
             android:textColor="@color/text_secondary"
             android:textSize="14sp"
-            android:lineSpacingExtra="8dp" />
+            android:lineSpacingExtra="8dp"
+            android:layout_marginBottom="12dp" />
 
+        <TextView
+            android:id="@+id/textHardwareInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/accent_primary"
+            android:textSize="12sp"
+            android:lineSpacingExtra="4dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnLoadModel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="加载模型"
+            android:background="@drawable/bg_button_primary"
+            android:textColor="@color/text_primary" />
+
+        <Button
+            android:id="@+id/btnUnloadModel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="卸载模型"
+            android:background="@drawable/bg_button_accent"
+            android:textColor="@color/text_primary"
+            android:visibility="gone" />
     </LinearLayout>
 
 </LinearLayout>
