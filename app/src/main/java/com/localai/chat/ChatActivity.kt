@@ -1,88 +1,118 @@
 package com.localai.chat
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
-import android.widget.*
-import androidx.activity.result.contract.ActivityResultContracts
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.Spinner
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.localai.chat.adapters.MessageListAdapter
+import com.localai.chat.data.models.MessageItem
+import com.localai.chat.utils.AgentExecutor
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 
 class ChatActivity : AppCompatActivity() {
-
-    private lateinit var etInput: EditText
-    private lateinit var btnSend: Button
+    
+    private lateinit var spinnerModel: Spinner
+    private lateinit var recyclerMessages: RecyclerView
+    private lateinit var editInput: EditText
+    private lateinit var btnSend: ImageButton
     private lateinit var btnAttach: ImageButton
-    private lateinit var tvChat: TextView
-    private var llama: LlamaHelper? = null
-    private var currentImageUri: Uri? = null
-
-    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.data
-            if (uri != null) {
-                currentImageUri = uri
-                Toast.makeText(this, "已选择图片", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
+    private lateinit var btnVoice: ImageButton
+    private lateinit var messageAdapter: MessageListAdapter
+    private val messages = mutableListOf<MessageItem>()
+    private lateinit var agentExecutor: AgentExecutor
+    
+    private var selectedModel: String = "默认模型"
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
-
-        etInput = findViewById(R.id.et_input)
-        btnSend = findViewById(R.id.btn_send)
-        btnAttach = findViewById(R.id.btn_attach)
-        tvChat = findViewById(R.id.tv_chat)
-
-        val modelPath = getSharedPreferences("app_config", MODE_PRIVATE)
-            .getString("current_model", null)
-        if (modelPath == null || !File(modelPath).exists()) {
-            Toast.makeText(this, "请先在“选择模型”中下载并选择一个模型", Toast.LENGTH_LONG).show()
-            finish()
-            return
-        }
-        lifecycleScope.launch(Dispatchers.IO) {
-            llama = LlamaHelper(modelPath)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@ChatActivity, "模型加载完成，可以开始对话", Toast.LENGTH_SHORT).show()
+        
+        initViews()
+        setupModelSelector()
+        setupRecyclerView()
+        setupInput()
+        
+        agentExecutor = AgentExecutor(this)
+    }
+    
+    private fun initViews() {
+        spinnerModel = findViewById(R.id.spinnerModel)
+        recyclerMessages = findViewById(R.id.recyclerMessages)
+        editInput = findViewById(R.id.editInput)
+        btnSend = findViewById(R.id.btnSend)
+        btnAttach = findViewById(R.id.btnAttach)
+        btnVoice = findViewById(R.id.btnVoice)
+    }
+    
+    private fun setupModelSelector() {
+        val models = arrayOf("默认模型", "LLaMA-2-7B", "LLaMA-2-13B", "Qwen-7B", "ChatGLM3-6B")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, models)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerModel.adapter = adapter
+        
+        spinnerModel.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedModel = models[position]
             }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-
-        btnAttach.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            pickImageLauncher.launch(intent)
-        }
-
+    }
+    
+    private fun setupRecyclerView() {
+        messageAdapter = MessageListAdapter(messages)
+        recyclerMessages.layoutManager = LinearLayoutManager(this)
+        recyclerMessages.adapter = messageAdapter
+    }
+    
+    private fun setupInput() {
         btnSend.setOnClickListener {
-            val input = etInput.text.toString().trim()
-            if (input.isEmpty() && currentImageUri == null) return@setOnClickListener
-
-            val userMessage = buildString {
-                if (currentImageUri != null) append("[图片] ")
-                append(if (input.isNotEmpty()) input else "描述这张图片")
+            val text = editInput.text.toString().trim()
+            if (text.isNotEmpty()) {
+                sendMessage(text)
+                editInput.text.clear()
             }
-            tvChat.append("你: $userMessage\n")
-            etInput.setText("")
-
-            lifecycleScope.launch(Dispatchers.IO) {
-                val reply = if (currentImageUri != null) {
-                    llama?.generateWithImage(currentImageUri!!.path!!, input)
-                        ?: "当前模型不支持图片识别，请更换多模态模型（如LLaVA）"
-                } else {
-                    llama?.generate(input) ?: "模型未响应"
-                }
-                withContext(Dispatchers.Main) {
-                    tvChat.append("AI: $reply\n\n")
-                    currentImageUri = null
-                }
-            }
+        }
+        
+        btnAttach.setOnClickListener {
+            Toast.makeText(this, "选择图片", Toast.LENGTH_SHORT).show()
+        }
+        
+        btnVoice.setOnClickListener {
+            Toast.makeText(this, "语音输入", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun sendMessage(text: String) {
+        val userMessage = MessageItem(
+            id = System.currentTimeMillis(),
+            content = text,
+            isUser = true,
+            timestamp = System.currentTimeMillis()
+        )
+        messages.add(userMessage)
+        messageAdapter.notifyItemInserted(messages.size - 1)
+        recyclerMessages.scrollToPosition(messages.size - 1)
+        
+        lifecycleScope.launch {
+            val response = agentExecutor.execute(text)
+            val aiMessage = MessageItem(
+                id = System.currentTimeMillis(),
+                content = response,
+                isUser = false,
+                timestamp = System.currentTimeMillis()
+            )
+            messages.add(aiMessage)
+            messageAdapter.notifyItemInserted(messages.size - 1)
+            recyclerMessages.scrollToPosition(messages.size - 1)
         }
     }
 }
+
