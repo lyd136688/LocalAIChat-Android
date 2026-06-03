@@ -7,6 +7,7 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -14,12 +15,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.localai.chat.adapters.MessageListAdapter
 import com.localai.chat.data.models.MessageItem
-import com.localai.chat.utils.AgentExecutor
+import com.localai.chat.utils.InferenceScheduler
 import kotlinx.coroutines.launch
 
 class ChatActivity : AppCompatActivity() {
     
     private lateinit var spinnerModel: Spinner
+    private lateinit var textBackend: TextView
     private lateinit var recyclerMessages: RecyclerView
     private lateinit var editInput: EditText
     private lateinit var btnSend: ImageButton
@@ -27,9 +29,10 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var btnVoice: ImageButton
     private lateinit var messageAdapter: MessageListAdapter
     private val messages = mutableListOf<MessageItem>()
-    private lateinit var agentExecutor: AgentExecutor
+    private lateinit var scheduler: InferenceScheduler
     
-    private var selectedModel: String = "默认模型"
+    private var selectedModel: String = "自动选择"
+    private val modelOptions = listOf("自动选择", "本地模型", "HuggingFace云端", "ModelScope云端")
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,11 +43,15 @@ class ChatActivity : AppCompatActivity() {
         setupRecyclerView()
         setupInput()
         
-        agentExecutor = AgentExecutor(this)
+        scheduler = InferenceScheduler(this)
+        
+        // 尝试加载已下载的模型
+        loadDownloadedModel()
     }
     
     private fun initViews() {
         spinnerModel = findViewById(R.id.spinnerModel)
+        textBackend = findViewById(R.id.textBackend)
         recyclerMessages = findViewById(R.id.recyclerMessages)
         editInput = findViewById(R.id.editInput)
         btnSend = findViewById(R.id.btnSend)
@@ -53,14 +60,14 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun setupModelSelector() {
-        val models = arrayOf("默认模型", "LLaMA-2-7B", "LLaMA-2-13B", "Qwen-7B", "ChatGLM3-6B")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, models)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelOptions)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerModel.adapter = adapter
         
         spinnerModel.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedModel = models[position]
+                selectedModel = modelOptions[position]
+                updateBackendStatus()
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
@@ -91,6 +98,7 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun sendMessage(text: String) {
+        // 添加用户消息
         val userMessage = MessageItem(
             id = System.currentTimeMillis(),
             content = text,
@@ -101,18 +109,60 @@ class ChatActivity : AppCompatActivity() {
         messageAdapter.notifyItemInserted(messages.size - 1)
         recyclerMessages.scrollToPosition(messages.size - 1)
         
+        // 选择后端
+        val backend = when (selectedModel) {
+            "本地模型" -> InferenceScheduler.Backend.LOCAL
+            "HuggingFace云端" -> InferenceScheduler.Backend.CLOUD_HF
+            "ModelScope云端" -> InferenceScheduler.Backend.CLOUD_MS
+            else -> null // 自动选择
+        }
+        
+        // 执行推理
         lifecycleScope.launch {
-            val response = agentExecutor.execute(text)
+            val result = scheduler.infer(text, backend)
+            
             val aiMessage = MessageItem(
                 id = System.currentTimeMillis(),
-                content = response,
+                content = result.text,
                 isUser = false,
                 timestamp = System.currentTimeMillis()
             )
             messages.add(aiMessage)
             messageAdapter.notifyItemInserted(messages.size - 1)
             recyclerMessages.scrollToPosition(messages.size - 1)
+            
+            // 显示使用的后端
+            textBackend.text = "后端: ${result.backend.name} | 延迟: ${result.latencyMs}ms"
         }
+    }
+    
+    private fun loadDownloadedModel() {
+        val modelsDir = getExternalFilesDir("models")
+        val ggufFiles = modelsDir?.listFiles { _, name -> name.endsWith(".gguf") }
+        
+        if (!ggufFiles.isNullOrEmpty()) {
+            val modelPath = ggufFiles[0].absolutePath
+            val loaded = scheduler.loadLocalModel(modelPath)
+            if (loaded) {
+                Toast.makeText(this, "已加载模型: ${ggufFiles[0].name}", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        updateBackendStatus()
+    }
+    
+    private fun updateBackendStatus() {
+        val status = when {
+            selectedModel != "自动选择" -> selectedModel
+            scheduler.isLocalModelLoaded() -> "本地模型就绪"
+            else -> "自动选择 (云端)"
+        }
+        textBackend.text = "后端: $status"
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        scheduler.unloadLocalModel()
     }
 }
 
