@@ -8,6 +8,7 @@ import android.os.Build
 import com.localai.chat.data.database.AppDatabase
 import com.localai.chat.utils.DownloadManager
 import com.localai.chat.utils.HardwareDetector
+import com.localai.chat.utils.InferenceScheduler
 import com.localai.chat.utils.MemoryManager
 
 class MyApplication : Application() {
@@ -25,6 +26,8 @@ class MyApplication : Application() {
         private set
     lateinit var hardwareDetector: HardwareDetector
         private set
+    lateinit var inferenceScheduler: InferenceScheduler
+        private set
     
     override fun onCreate() {
         super.onCreate()
@@ -34,6 +37,7 @@ class MyApplication : Application() {
         downloadManager = DownloadManager(this)
         memoryManager = MemoryManager(this)
         hardwareDetector = HardwareDetector(this)
+        inferenceScheduler = InferenceScheduler(this)
         
         createNotificationChannels()
     }
