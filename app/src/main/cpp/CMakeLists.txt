@@ -1,54 +1,50 @@
-cmake_minimum_required(VERSION 3.18.1)
+cmake_minimum_required(VERSION 3.22.1)
+project("localaichat")
 
-project("llama")
-
-# 设置C++标准
-set(CMAKE_CXX_STANDARD 11)
+# 设置 C++ 标准
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 查找预编译的llama库
+# 预编译 .so 库的路径
+set(JNI_LIBS_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a)
+
+# 导入预编译的 llama.cpp 库
 add_library(llama SHARED IMPORTED)
 set_target_properties(llama PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libllama.so
+    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libllama.so
 )
 
-# 查找预编译的ggml库
 add_library(ggml SHARED IMPORTED)
 set_target_properties(ggml PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libggml.so
+    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libggml.so
 )
 
-# 查找预编译的ggml-base库
-add_library(ggml-base SHARED IMPORTED)
-set_target_properties(ggml-base PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libggml-base.so
+add_library(ggml_base SHARED IMPORTED)
+set_target_properties(ggml_base PROPERTIES
+    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libggml-base.so
 )
 
-# 查找预编译的ggml-cpu库
-add_library(ggml-cpu SHARED IMPORTED)
-set_target_properties(ggml-cpu PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libggml-cpu-android_armv8.2_1.so
+add_library(ggml_cpu SHARED IMPORTED)
+set_target_properties(ggml_cpu PROPERTIES
+    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libggml-cpu-android_armv8.2_1.so
 )
 
-# JNI桥接文件
-add_library(
-    llama_jni
-    SHARED
+# 创建 JNI 桥接库
+add_library(localaichat_jni SHARED
     llama_jni.cpp
 )
 
-# 查找Android日志库
-find_library(
-    log-lib
-    log
+# 包含头文件目录
+target_include_directories(localaichat_jni PRIVATE
+    ${CMAKE_SOURCE_DIR}
 )
 
-# 链接所有库
-target_link_libraries(
-    llama_jni
+# 链接预编译库和 Android 日志库
+target_link_libraries(localaichat_jni
     llama
     ggml
-    ggml-base
-    ggml-cpu
-    ${log-lib}
+    ggml_base
+    ggml_cpu
+    android
+    log
 )
