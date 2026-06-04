@@ -17,16 +17,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // NDK配置
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-O3"
-                arguments += "-DANDROID_STL=c++_static"
-            }
-        }
-        
+        // NDK配置 - 使用预编译库，不需要编译C++源码
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            abiFilters += listOf("arm64-v8a")
         }
     }
 
@@ -50,7 +43,14 @@ android {
         viewBinding = true
     }
     
-    // 外部原生构建配置
+    // 配置jniLibs路径
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs("src/main/jniLibs")
+        }
+    }
+    
+    // 外部原生构建配置 - 只编译JNI桥接文件
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
@@ -94,4 +94,3 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
-
