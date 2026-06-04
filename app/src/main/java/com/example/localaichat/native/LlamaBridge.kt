@@ -2,13 +2,9 @@ package com.example.localaichat.native
 
 import android.util.Log
 
-/**
- * JNI 桥接类 - 封装 llama.cpp 本地推理
- */
 object LlamaBridge {
     private const val TAG = "LlamaBridge"
-    
-    // 加载 JNI 库
+
     init {
         try {
             System.loadLibrary("localaichat_jni")
@@ -18,8 +14,7 @@ object LlamaBridge {
             throw RuntimeException("Cannot load native library", e)
         }
     }
-    
-    // JNI 方法声明
+
     external fun nativeInit(): Boolean
     external fun nativeLoadModel(modelPath: String): Boolean
     external fun nativeIsModelLoaded(): Boolean
@@ -27,4 +22,11 @@ object LlamaBridge {
     external fun nativeUnloadModel()
     external fun nativeFree()
     external fun nativeGetModelInfo(): String
+
+    // 流式生成接口
+    external fun nativeGenerateStreaming(prompt: String, maxTokens: Int, callback: TokenCallback)
+
+    interface TokenCallback {
+        fun onToken(token: String)
+    }
 }
