@@ -1,160 +1,255 @@
 #include <jni.h>
 #include <string>
 #include <android/log.h>
-
-// 包含llama.cpp的头文件
 #include "llama.h"
 
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "LLaMA", __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "LLaMA", __VA_ARGS__)
+#define LOG_TAG "LlamaJNI"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // 全局变量
-static llama_model* g_model = nullptr;
-static llama_context* g_ctx = nullptr;
+static llama_model *g_model = nullptr;
+static llama_context *g_ctx = nullptr;
+static llama_sampler *g_sampler = nullptr;
 
-extern "C" {
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_example_localaichat_native_LlamaBridge_nativeInit(
+    JNIEnv *env, jobject /* this */) {
+    LOGI("LlamaJNI initializing...");
+    llama_backend_init();
+    LOGI("Llama backend initialized successfully");
+    return JNI_TRUE;
+}
 
-JNIEXPORT jboolean JNICALL
-Java_com_localai_chat_utils_LlamaBridge_loadModel(JNIEnv* env, jobject thiz, jstring model_path) {
-    const char* path = env->GetStringUTFChars(model_path, nullptr);
-    
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_example_localaichat_native_LlamaBridge_nativeLoadModel(
+    JNIEnv *env, jobject /* this */, jstring model_path) {
+    const char *path = env->GetStringUTFChars(model_path, nullptr);
     LOGI("Loading model from: %s", path);
-    
-    // 加载模型
-    llama_model_params model_params = llama_model_default_params();
-    model_params.n_gpu_layers = 0; // CPU only for Android
-    
-    g_model = llama_load_model_from_file(path, model_params);
-    
-    if (g_model == nullptr) {
-        LOGE("Failed to load model");
-        env->ReleaseStringUTFChars(model_path, path);
-        return false;
-    }
-    
-    // 创建上下文
-    llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = 2048; // 上下文长度
-    ctx_params.n_threads = 4; // 线程数
-    
-    g_ctx = llama_new_context_with_model(g_model, ctx_params);
-    
-    if (g_ctx == nullptr) {
-        LOGE("Failed to create context");
-        llama_free_model(g_model);
-        g_model = nullptr;
-        env->ReleaseStringUTFChars(model_path, path);
-        return false;
-    }
-    
-    env->ReleaseStringUTFChars(model_path, path);
-    
-    LOGI("Model loaded successfully");
-    return true;
-}
 
-JNIEXPORT jstring JNICALL
-Java_com_localai_chat_utils_LlamaBridge_generate(
-    JNIEnv* env, 
-    jobject thiz, 
-    jstring prompt, 
-    jint max_tokens, 
-    jfloat temperature
-) {
-    const char* prompt_str = env->GetStringUTFChars(prompt, nullptr);
-    
-    LOGI("Generating with prompt: %s", prompt_str);
-    
-    if (g_model == nullptr || g_ctx == nullptr) {
-        env->ReleaseStringUTFChars(prompt, prompt_str);
-        return env->NewStringUTF("Error: Model not loaded");
-    }
-    
-    // 分词
-    std::vector<llama_token> tokens_list;
-    tokens_list.reserve(max_tokens);
-    
-    int n_tokens = llama_tokenize(
-        g_ctx,
-        prompt_str,
-        strlen(prompt_str),
-        tokens_list.data(),
-        tokens_list.capacity(),
-        true,
-        false
-    );
-    
-    if (n_tokens < 0) {
-        env->ReleaseStringUTFChars(prompt, prompt_str);
-        return env->NewStringUTF("Error: Tokenization failed");
-    }
-    
-    tokens_list.resize(n_tokens);
-    
-    // 生成回复
-    std::string response;
-    int n_gen = 0;
-    
-    for (int i = 0; i < max_tokens && n_gen < max_tokens; i++) {
-        // 解码
-        if (llama_decode(g_ctx, llama_batch_get_one(tokens_list.data(), tokens_list.size(), 0, 0)) != 0) {
-            break;
-        }
-        
-        // 采样
-        llama_token new_token_id = llama_sampler_sample(nullptr, g_ctx, -1);
-        
-        // 检查是否结束
-        if (llama_token_is_eog(g_model, new_token_id)) {
-            break;
-        }
-        
-        // 转换为文本
-        char buf[256];
-        int n = llama_token_to_piece(g_model, new_token_id, buf, sizeof(buf), 0, true);
-        if (n > 0) {
-            response.append(buf, n);
-        }
-        
-        // 准备下一个token
-        tokens_list.clear();
-        tokens_list.push_back(new_token_id);
-        n_gen++;
-    }
-    
-    env->ReleaseStringUTFChars(prompt, prompt_str);
-    
-    if (response.empty()) {
-        return env->NewStringUTF("Error: Generation failed");
-    }
-    
-    return env->NewStringUTF(response.c_str());
-}
-
-JNIEXPORT void JNICALL
-Java_com_localai_chat_utils_LlamaBridge_unloadModel(JNIEnv* env, jobject thiz) {
-    LOGI("Unloading model");
-    
-    if (g_ctx != nullptr) {
+    // 释放之前的模型
+    if (g_ctx) {
         llama_free(g_ctx);
         g_ctx = nullptr;
     }
-    
-    if (g_model != nullptr) {
+    if (g_model) {
         llama_free_model(g_model);
         g_model = nullptr;
     }
+    if (g_sampler) {
+        llama_sampler_free(g_sampler);
+        g_sampler = nullptr;
+    }
+
+    // 模型参数
+    llama_model_params model_params = llama_model_default_params();
+    model_params.n_gpu_layers = 0; // 不使用 GPU，纯 CPU 推理
+
+    // 加载模型
+    g_model = llama_load_model_from_file(path, model_params);
+    env->ReleaseStringUTFChars(model_path, path);
+
+    if (!g_model) {
+        LOGE("Failed to load model");
+        return JNI_FALSE;
+    }
+
+    LOGI("Model loaded successfully, n_vocab=%d, n_ctx_train=%d",
+         llama_n_vocab(g_model), llama_n_ctx_train(g_model));
+
+    // 创建上下文
+    llama_context_params ctx_params = llama_context_default_params();
+    ctx_params.n_ctx = 2048;       // 上下文长度
+    ctx_params.n_batch = 512;      // 批处理大小
+    ctx_params.n_ubatch = 512;
+
+    g_ctx = llama_new_context_with_model(g_model, ctx_params);
+    if (!g_ctx) {
+        LOGE("Failed to create context");
+        llama_free_model(g_model);
+        g_model = nullptr;
+        return JNI_FALSE;
+    }
+
+    LOGI("Context created successfully, n_ctx=%d", llama_n_ctx(g_ctx));
+
+    // 创建采样器
+    g_sampler = llama_sampler_init_greedy();
+    if (!g_sampler) {
+        LOGE("Failed to create sampler");
+        llama_free(g_ctx);
+        g_ctx = nullptr;
+        llama_free_model(g_model);
+        g_model = nullptr;
+        return JNI_FALSE;
+    }
+
+    return JNI_TRUE;
 }
 
-JNIEXPORT jboolean JNICALL
-Java_com_localai_chat_utils_LlamaBridge_isModelLoaded(JNIEnv* env, jobject thiz) {
-    return g_model != nullptr && g_ctx != nullptr;
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_example_localaichat_native_LlamaBridge_nativeIsModelLoaded(
+    JNIEnv *env, jobject /* this */) {
+    return g_model != nullptr && g_ctx != nullptr ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT jlong JNICALL
-Java_com_localai_chat_utils_LlamaBridge_getModelSize(JNIEnv* env, jobject thiz) {
-    if (g_model == nullptr) return 0;
-    return llama_model_size(g_model);
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_localaichat_native_LlamaBridge_nativeGenerate(
+    JNIEnv *env, jobject /* this */, jstring prompt, jint max_tokens) {
+    if (!g_model || !g_ctx || !g_sampler) {
+        LOGE("Model not loaded");
+        return env->NewStringUTF("Error: Model not loaded");
+    }
+
+    const char *prompt_str = env->GetStringUTFChars(prompt, nullptr);
+    LOGI("Generating response for prompt (length=%zu)", strlen(prompt_str));
+
+    // 将 prompt 转换为 tokens
+    std::vector<llama_token> prompt_tokens;
+    prompt_tokens.resize(512);
+
+    int n_tokens = llama_tokenize(
+        g_model,
+        prompt_str,
+        strlen(prompt_str),
+        prompt_tokens.data(),
+        prompt_tokens.size(),
+        true,  // add_bos
+        true   // special_tokens
+    );
+
+    if (n_tokens < 0) {
+        LOGE("Tokenization failed");
+        env->ReleaseStringUTFChars(prompt, prompt_str);
+        return env->NewStringUTF("Error: Tokenization failed");
+    }
+
+    prompt_tokens.resize(n_tokens);
+    LOGI("Tokenized prompt: %d tokens", n_tokens);
+
+    // 清除 KV 缓存
+    llama_kv_cache_clear(g_ctx);
+
+    // 批量处理 prompt tokens
+    int n_batch = 512;
+    for (int i = 0; i < n_tokens; i += n_batch) {
+        int n_eval = n_tokens - i;
+        if (n_eval > n_batch) n_eval = n_batch;
+
+        llama_batch batch = llama_batch_init(n_eval, 0, 1);
+        for (int j = 0; j < n_eval; j++) {
+            batch.token[j] = prompt_tokens[i + j];
+            batch.pos[j] = i + j;
+            batch.n_seq_id[j] = 1;
+            batch.seq_id[j][0] = 0;
+            batch.logits[j] = false;
+        }
+
+        if (llama_decode(g_ctx, batch) != 0) {
+            LOGE("Failed to decode prompt batch at position %d", i);
+            llama_batch_free(batch);
+            env->ReleaseStringUTFChars(prompt, prompt_str);
+            return env->NewStringUTF("Error: Decode failed");
+        }
+        llama_batch_free(batch);
+    }
+
+    LOGI("Prompt decoded, starting generation (max_tokens=%d)", max_tokens);
+
+    // 生成回复
+    std::string response;
+    const llama_token eos = llama_token_eos(g_model);
+
+    for (int i = 0; i < max_tokens; i++) {
+        // 获取下一个 token
+        llama_token new_token = llama_sampler_sample(g_sampler, g_ctx, -1);
+
+        // 检查是否结束
+        if (new_token == eos) {
+            LOGI("EOS token reached at position %d", i);
+            break;
+        }
+
+        // 将 token 转换为文本
+        char buf[256];
+        int n = llama_token_to_piece(g_model, new_token, buf, sizeof(buf), 0, true);
+        if (n > 0) {
+            response.append(buf, n);
+        }
+
+        // 将新 token 送入解码器
+        llama_batch batch = llama_batch_init(1, 0, 1);
+        batch.token[0] = new_token;
+        batch.pos[0] = n_tokens + i;
+        batch.n_seq_id[0] = 1;
+        batch.seq_id[0][0] = 0;
+        batch.logits[0] = true;
+
+        if (llama_decode(g_ctx, batch) != 0) {
+            LOGE("Failed to decode generated token at position %d", i);
+            break;
+        }
+        llama_batch_free(batch);
+    }
+
+    env->ReleaseStringUTFChars(prompt, prompt_str);
+    LOGI("Generation complete, response length=%zu", response.length());
+
+    return env->NewStringUTF(response.c_str());
 }
 
-} // extern "C"
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_localaichat_native_LlamaBridge_nativeUnloadModel(
+    JNIEnv *env, jobject /* this */) {
+    LOGI("Unloading model...");
+
+    if (g_sampler) {
+        llama_sampler_free(g_sampler);
+        g_sampler = nullptr;
+    }
+    if (g_ctx) {
+        llama_free(g_ctx);
+        g_ctx = nullptr;
+    }
+    if (g_model) {
+        llama_free_model(g_model);
+        g_model = nullptr;
+    }
+
+    LOGI("Model unloaded");
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_localaichat_native_LlamaBridge_nativeFree(
+    JNIEnv *env, jobject /* this */) {
+    LOGI("Freeing llama backend...");
+    nativeUnloadModel(env, nullptr);
+    llama_backend_free();
+    LOGI("Llama backend freed");
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_localaichat_native_LlamaBridge_nativeGetModelInfo(
+    JNIEnv *env, jobject /* this */) {
+    if (!g_model) {
+        return env->NewStringUTF("No model loaded");
+    }
+
+    char info[512];
+    snprintf(info, sizeof(info),
+        "Model Info:\n"
+        "  Vocab size: %d\n"
+        "  Context train: %d\n"
+        "  Embedding dim: %d\n"
+        "  Head count: %d\n"
+        "  Layer count: %d",
+        llama_n_vocab(g_model),
+        llama_n_ctx_train(g_model),
+        llama_n_embd(g_model),
+        llama_n_head(g_model),
+        llama_n_layer(g_model)
+    );
+
+    return env->NewStringUTF(info);
+}
+
