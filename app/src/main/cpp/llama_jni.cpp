@@ -7,13 +7,12 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-// 全局变量
 static llama_model *g_model = nullptr;
 static llama_context *g_ctx = nullptr;
 static llama_sampler *g_sampler = nullptr;
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_localaichat_native_LlamaBridge_nativeInit(
+Java_com_localai_chat_native_LlamaBridge_nativeInit(
     JNIEnv *env, jobject /* this */) {
     LOGI("LlamaJNI initializing...");
     llama_backend_init();
@@ -22,12 +21,11 @@ Java_com_example_localaichat_native_LlamaBridge_nativeInit(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_localaichat_native_LlamaBridge_nativeLoadModel(
+Java_com_localai_chat_native_LlamaBridge_nativeLoadModel(
     JNIEnv *env, jobject /* this */, jstring model_path) {
     const char *path = env->GetStringUTFChars(model_path, nullptr);
     LOGI("Loading model from: %s", path);
 
-    // 释放之前的模型
     if (g_ctx) {
         llama_free(g_ctx);
         g_ctx = nullptr;
@@ -41,11 +39,9 @@ Java_com_example_localaichat_native_LlamaBridge_nativeLoadModel(
         g_sampler = nullptr;
     }
 
-    // 模型参数
     llama_model_params model_params = llama_model_default_params();
-    model_params.n_gpu_layers = 0; // 不使用 GPU，纯 CPU 推理
+    model_params.n_gpu_layers = 0;
 
-    // 加载模型
     g_model = llama_load_model_from_file(path, model_params);
     env->ReleaseStringUTFChars(model_path, path);
 
@@ -57,10 +53,9 @@ Java_com_example_localaichat_native_LlamaBridge_nativeLoadModel(
     LOGI("Model loaded successfully, n_vocab=%d, n_ctx_train=%d",
          llama_n_vocab(g_model), llama_n_ctx_train(g_model));
 
-    // 创建上下文
     llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = 2048;       // 上下文长度
-    ctx_params.n_batch = 512;      // 批处理大小
+    ctx_params.n_ctx = 2048;
+    ctx_params.n_batch = 512;
     ctx_params.n_ubatch = 512;
 
     g_ctx = llama_new_context_with_model(g_model, ctx_params);
@@ -73,7 +68,6 @@ Java_com_example_localaichat_native_LlamaBridge_nativeLoadModel(
 
     LOGI("Context created successfully, n_ctx=%d", llama_n_ctx(g_ctx));
 
-    // 创建采样器
     g_sampler = llama_sampler_init_greedy();
     if (!g_sampler) {
         LOGE("Failed to create sampler");
@@ -88,13 +82,13 @@ Java_com_example_localaichat_native_LlamaBridge_nativeLoadModel(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_localaichat_native_LlamaBridge_nativeIsModelLoaded(
+Java_com_localai_chat_native_LlamaBridge_nativeIsModelLoaded(
     JNIEnv *env, jobject /* this */) {
     return g_model != nullptr && g_ctx != nullptr ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_localaichat_native_LlamaBridge_nativeGenerate(
+Java_com_localai_chat_native_LlamaBridge_nativeGenerate(
     JNIEnv *env, jobject /* this */, jstring prompt, jint max_tokens) {
     if (!g_model || !g_ctx || !g_sampler) {
         LOGE("Model not loaded");
@@ -104,7 +98,6 @@ Java_com_example_localaichat_native_LlamaBridge_nativeGenerate(
     const char *prompt_str = env->GetStringUTFChars(prompt, nullptr);
     LOGI("Generating response for prompt (length=%zu)", strlen(prompt_str));
 
-    // 将 prompt 转换为 tokens
     std::vector<llama_token> prompt_tokens;
     prompt_tokens.resize(512);
 
@@ -114,8 +107,8 @@ Java_com_example_localaichat_native_LlamaBridge_nativeGenerate(
         strlen(prompt_str),
         prompt_tokens.data(),
         prompt_tokens.size(),
-        true,  // add_bos
-        true   // special_tokens
+        true,
+        true
     );
 
     if (n_tokens < 0) {
@@ -127,10 +120,8 @@ Java_com_example_localaichat_native_LlamaBridge_nativeGenerate(
     prompt_tokens.resize(n_tokens);
     LOGI("Tokenized prompt: %d tokens", n_tokens);
 
-    // 清除 KV 缓存
     llama_kv_cache_clear(g_ctx);
 
-    // 批量处理 prompt tokens
     int n_batch = 512;
     for (int i = 0; i < n_tokens; i += n_batch) {
         int n_eval = n_tokens - i;
@@ -156,28 +147,23 @@ Java_com_example_localaichat_native_LlamaBridge_nativeGenerate(
 
     LOGI("Prompt decoded, starting generation (max_tokens=%d)", max_tokens);
 
-    // 生成回复
     std::string response;
     const llama_token eos = llama_token_eos(g_model);
 
     for (int i = 0; i < max_tokens; i++) {
-        // 获取下一个 token
         llama_token new_token = llama_sampler_sample(g_sampler, g_ctx, -1);
 
-        // 检查是否结束
         if (new_token == eos) {
             LOGI("EOS token reached at position %d", i);
             break;
         }
 
-        // 将 token 转换为文本
         char buf[256];
         int n = llama_token_to_piece(g_model, new_token, buf, sizeof(buf), 0, true);
         if (n > 0) {
             response.append(buf, n);
         }
 
-        // 将新 token 送入解码器
         llama_batch batch = llama_batch_init(1, 0, 1);
         batch.token[0] = new_token;
         batch.pos[0] = n_tokens + i;
@@ -199,7 +185,7 @@ Java_com_example_localaichat_native_LlamaBridge_nativeGenerate(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_localaichat_native_LlamaBridge_nativeUnloadModel(
+Java_com_localai_chat_native_LlamaBridge_nativeUnloadModel(
     JNIEnv *env, jobject /* this */) {
     LOGI("Unloading model...");
 
@@ -220,16 +206,16 @@ Java_com_example_localaichat_native_LlamaBridge_nativeUnloadModel(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_localaichat_native_LlamaBridge_nativeFree(
+Java_com_localai_chat_native_LlamaBridge_nativeFree(
     JNIEnv *env, jobject /* this */) {
     LOGI("Freeing llama backend...");
-    nativeUnloadModel(env, nullptr);
+    Java_com_localai_chat_native_LlamaBridge_nativeUnloadModel(env, nullptr);
     llama_backend_free();
     LOGI("Llama backend freed");
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_localaichat_native_LlamaBridge_nativeGetModelInfo(
+Java_com_localai_chat_native_LlamaBridge_nativeGetModelInfo(
     JNIEnv *env, jobject /* this */) {
     if (!g_model) {
         return env->NewStringUTF("No model loaded");
