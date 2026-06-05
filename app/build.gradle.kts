@@ -1,3 +1,6 @@
+import java.net.URL
+import java.util.zip.ZipFile
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -129,31 +132,31 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
         println("Extracting native libraries...")
         extractZip(zipFile, jniLibsDir)
 
-        markerFile.writeText("Native libraries extracted on ${java.util.Date()}")
+        markerFile.writeText("Native libraries extracted on ${System.currentTimeMillis()}")
 
         println("Native libraries ready at: ${jniLibsDir.absolutePath}")
     }
 
     private fun downloadFile(url: String, outputFile: File) {
-        val connection = java.net.URL(url).openConnection()
+        val connection = URL(url).openConnection()
         connection.setRequestProperty("User-Agent", "Gradle")
         connection.connectTimeout = 30000
         connection.readTimeout = 120000
 
-        connection.getInputStream().use { input ->
-            outputFile.outputStream().use { output ->
+        connection.getInputStream().buffered().use { input ->
+            outputFile.outputStream().buffered().use { output ->
                 input.copyTo(output)
             }
         }
     }
 
     private fun extractZip(zipFile: File, outputDir: File) {
-        java.util.zip.ZipFile(zipFile).use { zip ->
-            zip.entries().asSequence().forEach { entry ->
+        ZipFile(zipFile).use { zip ->
+            zip.entries().toList().forEach { entry ->
                 if (!entry.isDirectory && entry.name.endsWith(".so")) {
                     val outputFile = File(outputDir, entry.name.substringAfterLast("/"))
-                    zip.getInputStream(entry).use { input ->
-                        outputFile.outputStream().use { output ->
+                    zip.getInputStream(entry).buffered().use { input ->
+                        outputFile.outputStream().buffered().use { output ->
                             input.copyTo(output)
                         }
                     }
