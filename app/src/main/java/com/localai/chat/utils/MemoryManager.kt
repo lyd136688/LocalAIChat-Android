@@ -1,77 +1,70 @@
 package com.localai.chat.utils
 
+import android.content.Context
+import com.localai.chat.data.database.AppDatabase
 import com.localai.chat.data.database.MemoryEntity
 import com.localai.chat.data.models.MemoryItem
+import com.localai.chat.data.models.MessageItem
 import kotlinx.coroutines.flow.first
+import java.util.UUID
 
-class MemoryManager(private val context: android.content.Context) {
-    
-    companion object {
-        const val TYPE_SHORT_TERM = "short_term"
-        const val TYPE_LONG_TERM = "long_term"
-        private const val MAX_SHORT_TERM = 50
-        private const val MAX_LONG_TERM = 200
+class MemoryManager(private val context: Context, private val database: AppDatabase) {
+
+    suspend fun addShortTermMemory(content: String, source: String) {
+        database.memoryDao().insert(MemoryEntity(
+            UUID.randomUUID().toString(),
+            content,
+            "short_term",
+            source,
+            sessionId = getCurrentSessionId()
+        ))
     }
-    
-    private val memoryDao = com.localai.chat.MyApplication.instance.database.memoryDao()
-    
-    suspend fun addMemory(content: String, type: String = TYPE_SHORT_TERM): MemoryItem {
-        val id = System.currentTimeMillis()
-        val entity = MemoryEntity(
-            id = id,
-            content = content,
-            type = type,
-            timestamp = id
-        )
-        memoryDao.insertMemory(entity)
-        
-        if (type == TYPE_SHORT_TERM) {
-            trimMemories(TYPE_SHORT_TERM, MAX_SHORT_TERM)
-        }
-        
-        return MemoryItem(id, content, type, id)
-    }
-    
+
     suspend fun getShortTermMemories(): List<MemoryItem> {
-        return memoryDao.getMemoriesByType(TYPE_SHORT_TERM).first().map { entity ->
-            MemoryItem(entity.id, entity.content, entity.type, entity.timestamp)
-        }
+        return database.memoryDao().getByType("short_term").first().map { it.toMemoryItem() }
     }
-    
+
     suspend fun getLongTermMemories(): List<MemoryItem> {
-        return memoryDao.getMemoriesByType(TYPE_LONG_TERM).first().map { entity ->
-            MemoryItem(entity.id, entity.content, entity.type, entity.timestamp)
+        return database.memoryDao().getByType("long_term").first().map { it.toMemoryItem() }
+    }
+
+    suspend fun getRecentMessages(limit: Int): List<MessageItem> {
+        return database.messageDao().getRecent(limit).first().map { it.toMessageItem() }
+    }
+
+    suspend fun archiveToLongTerm(id: String) {
+        database.memoryDao().archiveToLongTerm(id, System.currentTimeMillis())
+    }
+
+    suspend fun deleteMemory(id: String) {
+        database.memoryDao().getById(id)?.let { database.memoryDao().delete(it) }
+    }
+
+    suspend fun searchMemories(query: String): List<MemoryItem> {
+        return database.memoryDao().search("%$query%").first().map { it.toMemoryItem() }
+    }
+
+    suspend def getMemoriesByTag(tag: String): List<MemoryItem> {
+        return database.memoryDao().getByTag(tag).first().map { it.toMemoryItem() }
+    }
+
+    private fun getCurrentSessionId(): String {
+        val prefs = context.getSharedPreferences("session", Context.MODE_PRIVATE)
+        var sessionId = prefs.getString("current_session", null)
+        if (sessionId == null) {
+            sessionId = UUID.randomUUID().toString()
+            prefs.edit().putString("current_session", sessionId).apply()
         }
+        return sessionId
     }
-    
-    suspend fun deleteMemory(id: Long) {
-        memoryDao.deleteMemory(id)
-    }
-    
-    suspend fun archiveMemory(id: Long) {
-        memoryDao.archiveMemory(id)
-    }
-    
-    suspend fun searchMemory(query: String): List<MemoryItem> {
-        val allMemories = memoryDao.getMemoriesByType(TYPE_SHORT_TERM).first() +
-            memoryDao.getMemoriesByType(TYPE_LONG_TERM).first()
-        
-        return allMemories
-            .filter { it.content.contains(query, ignoreCase = true) }
-            .map { MemoryItem(it.id, it.content, it.type, it.timestamp) }
-    }
-    
-    suspend fun promoteToLongTerm(id: Long) {
-        val entity = memoryDao.getMemoryById(id) ?: return
-        val updated = entity.copy(type = TYPE_LONG_TERM)
-        memoryDao.updateMemory(updated)
-    }
-    
-    private suspend fun trimMemories(type: String, maxCount: Int) {
-        val memories = memoryDao.getMemoriesByType(type).first()
-        if (memories.size > maxCount) {
-            val toDelete = memories.dropLast(maxCount)
-            toDelete.forEach { memoryDao.deleteMemory(it.id) }
-        }
-    }
+
+    private fun MemoryEntity.toMemoryItem() = MemoryItem(
+        id, content, type, source, createdAt,
+        tags?.split(",") ?: emptyList(), relevanceScore
+    )
+
+    private fun com.localai.chat.data.database.MessageEntity.toMessageItem() = MessageItem(
+        id, content, isUser, timestamp, imageUrl, status
+    )
 }
+
