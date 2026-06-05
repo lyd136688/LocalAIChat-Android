@@ -28,12 +28,12 @@ jobs:
     
     - name: Download native libraries
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: ./gradlew downloadNativeLibs
     
     - name: Build with Gradle
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: ./gradlew assembleDebug
     
     - name: Upload APK
