@@ -146,7 +146,7 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
         }
         
         // 配置信息
-        val githubToken = System.getenv("GITHUB_TOKEN") ?: ""
+        val githubToken = System.getenv("GH_TOKEN") ?: ""
         val repoOwner = "lyd136688"
         val repoName = "LocalAIChat-Android"
         val tagName = "v1.0.0native"
@@ -170,7 +170,7 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
             println("Please ensure:")
             println("1. The Release '$tagName' exists in your repository")
             println("2. The asset '$assetName' is attached to the Release")
-            println("3. For private repos, GITHUB_TOKEN secret is set with 'repo' permission")
+            println("3. For private repos, GH_TOKEN secret is set with 'repo' permission")
             throw e
         }
     }
