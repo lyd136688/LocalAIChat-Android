@@ -2,70 +2,43 @@ name: Android CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
+    - uses: actions/checkout@v4
+    
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-
-    - name: Cache Android SDK
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/android-sdk
-          ~/Android
-        key: ${{ runner.os }}-android-${{ hashFiles('**/local.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-android-
-
+        cache: gradle
+    
     - name: Setup Android SDK
-      run: |
-        if [ ! -d "$HOME/android-sdk" ]; then
-          mkdir -p $HOME/android-sdk
-          cd $HOME/android-sdk
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip
-          mkdir -p cmdline-tools/latest
-          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
-          echo "sdk.dir=$HOME/android-sdk" > $GITHUB_WORKSPACE/local.properties
-        fi
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-        yes | sdkmanager --licenses > /dev/null 2>&1 || true
-        sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;25.2.9519653" "cmake;3.22.1" > /dev/null 2>&1
-
+      uses: android-actions/setup-android@v3
+    
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-
+    
+    - name: Download native libraries
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: ./gradlew downloadNativeLibs
+    
     - name: Build with Gradle
-      run: ./gradlew assembleDebug --no-daemon
-
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: ./gradlew assembleDebug
+    
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
-        path: app/build/outputs/apk/debug/*.apk
-        retention-days: 7
+        name: debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
 
