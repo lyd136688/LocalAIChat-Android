@@ -147,30 +147,21 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
             return
         }
         
-        val githubToken = (project.findProperty("ghToken") as? String)
-            ?.takeIf { it.isNotEmpty() }
-            ?: (System.getenv("GH_TOKEN") ?: "")
         val repoOwner = "lyd136688"
         val repoName = "LocalAIChat-Android"
         val tagName = "v1.0.0native"
         val assetName = "native-libs-arm64.zip"
         
-        jniLibsDir.mkdirs()
+        val zipUrl = "https://github.com/$repoOwner/$repoName/releases/download/$tagName/$assetName"
+        val zipFile = File(project.buildDir, "tmp/native-libs-arm64.zip")
         
-        println("Token provided: ${githubToken.isNotEmpty()}")
+        jniLibsDir.mkdirs()
+        zipFile.parentFile.mkdirs()
+        
+        println("Downloading native libraries from: $zipUrl")
         
         try {
-            val zipFile = File(project.buildDir, "tmp/native-libs-arm64.zip")
-            zipFile.parentFile.mkdirs()
-            
-            if (githubToken.isNotEmpty()) {
-                val assetId = getAssetId(repoOwner, repoName, tagName, assetName, githubToken)
-                downloadFromAssetApi(repoOwner, repoName, assetId, zipFile, githubToken)
-            } else {
-                val downloadUrl = "https://github.com/$repoOwner/$repoName/releases/download/$tagName/$assetName"
-                downloadFile(downloadUrl, zipFile, githubToken)
-            }
-            
+            downloadFile(zipUrl, zipFile)
             extractZip(zipFile, jniLibsDir)
             markerFile.writeText("Native libraries extracted on ${System.currentTimeMillis()}")
             println("Native libraries downloaded and extracted successfully.")
@@ -180,156 +171,25 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
         }
     }
     
-    private fun getAssetId(owner: String, repo: String, tag: String, assetName: String, token: String): Long {
-        val apiUrl = "https://api.github.com/repos/$owner/$repo/releases/tags/$tag"
-        println("Fetching release info from API: $apiUrl")
-        
-        val connection = URL(apiUrl).openConnection() as HttpURLConnection
+    private fun downloadFile(url: String, outputFile: File) {
+        val connection = URL(url).openConnection() as HttpURLConnection
         connection.setRequestProperty("User-Agent", "Gradle-LocalAIChat-Android")
-        connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-        connection.setRequestProperty("Authorization", "token $token")
+        connection.setRequestProperty("Accept", "application/octet-stream")
+        connection.instanceFollowRedirects = true
         connection.connectTimeout = 30000
         connection.readTimeout = 120000
         
         val responseCode = connection.responseCode
         if (responseCode != 200) {
-            val error = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-            throw RuntimeException("GitHub API returned $responseCode: $error")
+            throw RuntimeException("HTTP $responseCode: $url")
         }
         
-        val response = connection.inputStream.bufferedReader().use { it.readText() }
-        
-        val nameIndex = response.indexOf("\"name\":\"$assetName\"")
-        if (nameIndex == -1) {
-            println("Response preview: ${response.take(2000)}")
-            throw RuntimeException("Asset '$assetName' not found in release")
-        }
-        
-        val searchStart = maxOf(0, nameIndex - 500)
-        val searchSection = response.substring(searchStart, nameIndex)
-        
-        val idPattern = "\"id\"\\s*:\\s*(\\d+)"
-        val idMatches = Regex(idPattern).findAll(searchSection).toList()
-        
-        if (idMatches.isEmpty()) {
-            println("Search section: $searchSection")
-            throw RuntimeException("Could not find asset ID near '$assetName'")
-        }
-        
-        val assetId = idMatches.last().groupValues[1].toLong()
-        println("Found asset: $assetName (id=$assetId)")
-        
-        return assetId
-    }
-    
-    private fun downloadFromAssetApi(owner: String, repo: String, assetId: Long, outputFile: File, token: String) {
-        val assetUrl = "https://api.github.com/repos/$owner/$repo/releases/assets/$assetId"
-        println("Downloading from asset API: $assetUrl")
-        
-        var currentUrl = assetUrl
-        var redirectCount = 0
-        val maxRedirects = 5
-        
-        while (redirectCount < maxRedirects) {
-            val connection = URL(currentUrl).openConnection() as HttpURLConnection
-            connection.setRequestProperty("User-Agent", "Gradle-LocalAIChat-Android")
-            connection.setRequestProperty("Accept", "application/octet-stream")
-            connection.setRequestProperty("Authorization", "token $token")
-            connection.instanceFollowRedirects = false
-            
-            connection.connectTimeout = 30000
-            connection.readTimeout = 120000
-            
-            val responseCode = connection.responseCode
-            println("Response code: $responseCode")
-            
-            when (responseCode) {
-                200 -> {
-                    connection.inputStream.buffered().use { input ->
-                        outputFile.outputStream().buffered().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    println("Download completed: ${outputFile.length()} bytes")
-                    return
-                }
-                301, 302, 303, 307, 308 -> {
-                    val location = connection.getHeaderField("Location")
-                    if (location != null) {
-                        println("Redirecting to: $location")
-                        currentUrl = location
-                        redirectCount++
-                        connection.disconnect()
-                    } else {
-                        throw RuntimeException("Redirect ($responseCode) without Location header")
-                    }
-                }
-                401 -> {
-                    throw RuntimeException("Unauthorized (401). Token may be invalid or expired.")
-                }
-                403 -> {
-                    throw RuntimeException("Forbidden (403). Token may lack required permissions.")
-                }
-                404 -> {
-                    throw RuntimeException("Asset not found (404). Asset ID: $assetId")
-                }
-                else -> {
-                    throw RuntimeException("Unexpected HTTP response: $responseCode")
-                }
+        connection.inputStream.buffered().use { input ->
+            outputFile.outputStream().buffered().use { output ->
+                input.copyTo(output)
             }
         }
-        throw RuntimeException("Too many redirects (>$maxRedirects)")
-    }
-    
-    private fun downloadFile(url: String, outputFile: File, token: String) {
-        var currentUrl = url
-        var redirectCount = 0
-        val maxRedirects = 5
-        
-        while (redirectCount < maxRedirects) {
-            val connection = URL(currentUrl).openConnection() as HttpURLConnection
-            connection.setRequestProperty("User-Agent", "Gradle-LocalAIChat-Android")
-            connection.setRequestProperty("Accept", "application/octet-stream")
-            connection.instanceFollowRedirects = false
-            
-            if (token.isNotEmpty()) {
-                connection.setRequestProperty("Authorization", "token $token")
-            }
-            
-            connection.connectTimeout = 30000
-            connection.readTimeout = 120000
-            
-            val responseCode = connection.responseCode
-            
-            when (responseCode) {
-                200 -> {
-                    connection.inputStream.buffered().use { input ->
-                        outputFile.outputStream().buffered().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    println("Download completed: ${outputFile.length()} bytes")
-                    return
-                }
-                301, 302, 303, 307, 308 -> {
-                    val location = connection.getHeaderField("Location")
-                    if (location != null) {
-                        currentUrl = location
-                        redirectCount++
-                        connection.disconnect()
-                    } else {
-                        throw RuntimeException("Redirect ($responseCode) without Location header")
-                    }
-                }
-                404 -> {
-                    throw RuntimeException("File not found (404)")
-                }
-                else -> {
-                    throw RuntimeException("Unexpected HTTP response: $responseCode")
-                }
-            }
-        }
-        throw RuntimeException("Too many redirects (>$maxRedirects)")
+        println("Download completed: ${outputFile.length()} bytes")
     }
     
     private fun extractZip(zipFile: File, outputDir: File) {
