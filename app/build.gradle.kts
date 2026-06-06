@@ -200,30 +200,33 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
         
         val response = connection.inputStream.bufferedReader().use { it.readText() }
         
-        // 找到 assets 部分
-        val assetsSection = response.split("\"assets\":").getOrNull(1) ?: ""
-        val assetEntries = assetsSection.split("\"id\":").drop(1)
-        
-        for (entry in assetEntries) {
-            val nameMatch = Regex("\"name\"\\s*:\\s*\"([^\"]+)\"").find(entry)
-            val idMatch = Regex("\"id\"\\s*:\\s*(\\d+)").find(entry)
-            
-            if (nameMatch != null && idMatch != null) {
-                val name = nameMatch.groupValues[1]
-                val id = idMatch.groupValues[1].toLong()
-                println("Found asset: $name (id=$id)")
-                if (name == assetName) {
-                    return id
-                }
-            }
+        // 找到 asset 名称的位置
+        val nameIndex = response.indexOf("\"name\":\"$assetName\"")
+        if (nameIndex == -1) {
+            println("Response preview: ${response.take(2000)}")
+            throw RuntimeException("Asset '$assetName' not found in release")
         }
         
-        throw RuntimeException("Asset '$assetName' not found in release")
+        // 从 asset 名称往前搜索最近的 "id": 数字
+        val searchStart = maxOf(0, nameIndex - 500)
+        val searchSection = response.substring(searchStart, nameIndex)
+        
+        val idPattern = "\"id\"\\s*:\\s*(\\d+)"
+        val idMatches = Regex(idPattern).findAll(searchSection).toList()
+        
+        if (idMatches.isEmpty()) {
+            println("Search section: $searchSection")
+            throw RuntimeException("Could not find asset ID near '$assetName'")
+        }
+        
+        // 取最后一个匹配（最靠近 asset 名称的 id）
+        val assetId = idMatches.last().groupValues[1].toLong()
+        println("Found asset: $assetName (id=$assetId)")
+        
+        return assetId
     }
     
     private fun downloadFromAssetApi(owner: String, repo: String, assetId: Long, outputFile: File, token: String) {
-        // 私有仓库需要通过 assets API 下载
-        // 设置 Accept: application/octet-stream 让 API 返回文件内容而不是 JSON
         val assetUrl = "https://api.github.com/repos/$owner/$repo/releases/assets/$assetId"
         println("Downloading from asset API: $assetUrl")
         
