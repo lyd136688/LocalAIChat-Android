@@ -93,6 +93,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     
@@ -163,11 +164,9 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
             zipFile.parentFile.mkdirs()
             
             if (githubToken.isNotEmpty()) {
-                // 私有仓库：通过 API 获取 asset ID，再用 API 下载
                 val assetId = getAssetId(repoOwner, repoName, tagName, assetName, githubToken)
                 downloadFromAssetApi(repoOwner, repoName, assetId, zipFile, githubToken)
             } else {
-                // 公开仓库：直接下载
                 val downloadUrl = "https://github.com/$repoOwner/$repoName/releases/download/$tagName/$assetName"
                 downloadFile(downloadUrl, zipFile, githubToken)
             }
@@ -200,14 +199,12 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
         
         val response = connection.inputStream.bufferedReader().use { it.readText() }
         
-        // 找到 asset 名称的位置
         val nameIndex = response.indexOf("\"name\":\"$assetName\"")
         if (nameIndex == -1) {
             println("Response preview: ${response.take(2000)}")
             throw RuntimeException("Asset '$assetName' not found in release")
         }
         
-        // 从 asset 名称往前搜索最近的 "id": 数字
         val searchStart = maxOf(0, nameIndex - 500)
         val searchSection = response.substring(searchStart, nameIndex)
         
@@ -219,7 +216,6 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
             throw RuntimeException("Could not find asset ID near '$assetName'")
         }
         
-        // 取最后一个匹配（最靠近 asset 名称的 id）
         val assetId = idMatches.last().groupValues[1].toLong()
         println("Found asset: $assetName (id=$assetId)")
         
