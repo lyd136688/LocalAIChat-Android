@@ -201,43 +201,38 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
         
         val response = connection.inputStream.bufferedReader().use { it.readText() }
         
-        // 手动解析 JSON 找 assets
-        val assetsPattern = "\"assets\"\\s*:\\s*\\[(.*?)\\]"
-        val assetsRegex = Regex(assetsPattern, RegexOption.DOT_MATCHES_ALL)
-        val assetsMatch = assetsRegex.find(response)
+        // 提取所有 asset 的 name 和 browser_download_url
+        // 匹配模式：先找到 name，然后在同一段落中找到 browser_download_url
+        val assetBlocks = response.split("\"assets\":").getOrNull(1) ?: ""
         
-        if (assetsMatch == null) {
-            println("Response preview: ${response.take(1000)}")
-            throw RuntimeException("Could not find assets in API response")
-        }
+        // 查找包含目标 assetName 的 asset 块
+        val assetEntries = assetBlocks.split("\"id\":").drop(1)
         
-        val assetsSection = assetsMatch.groupValues[1]
-        
-        // 在 assets 中找匹配的 asset
-        val assetPattern = "\\{([^}]*)\"name\"\\s*:\\s*\"$assetName\"([^}]*)\\}"
-        val assetRegex = Regex(assetPattern, RegexOption.DOT_MATCHES_ALL)
-        val assetMatch = assetRegex.find(assetsSection)
-        
-        if (assetMatch == null) {
-            println("Available assets in response:")
-            val namePattern = "\"name\"\\s*:\\s*\"([^\"]+)\""
-            Regex(namePattern).findAll(assetsSection).forEach { 
-                println("  - ${it.groupValues[1]}")
+        for (entry in assetEntries) {
+            val nameMatch = Regex("\"name\"\\s*:\\s*\"([^\"]+)\"").find(entry)
+            val urlMatch = Regex("\"browser_download_url\"\\s*:\\s*\"([^\"]+)\"").find(entry)
+            
+            if (nameMatch != null && urlMatch != null) {
+                val name = nameMatch.groupValues[1]
+                val url = urlMatch.groupValues[1]
+                println("Found asset: $name")
+                if (name == assetName) {
+                    println("Download URL: $url")
+                    return url
+                }
             }
-            throw RuntimeException("Asset '$assetName' not found in release")
         }
         
-        val assetBlock = assetMatch.value
-        
-        // 提取 browser_download_url
-        val urlPattern = "\"browser_download_url\"\\s*:\\s*\"([^\"]+)\""
-        val urlMatch = Regex(urlPattern).find(assetBlock)
-        
-        if (urlMatch == null) {
-            throw RuntimeException("Could not find download URL for asset")
+        // 如果没找到，打印所有找到的 asset
+        println("Available assets:")
+        for (entry in assetEntries) {
+            val nameMatch = Regex("\"name\"\\s*:\\s*\"([^\"]+)\"").find(entry)
+            if (nameMatch != null) {
+                println("  - ${nameMatch.groupValues[1]}")
+            }
         }
         
-        return urlMatch.groupValues[1]
+        throw RuntimeException("Asset '$assetName' not found in release")
     }
     
     private fun downloadFile(url: String, outputFile: File, token: String) {
