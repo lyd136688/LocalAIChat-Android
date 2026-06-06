@@ -1,44 +1,27 @@
 cmake_minimum_required(VERSION 3.22.1)
-project("localaichat")
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+project("localaichat_jni")
 
-set(JNI_LIBS_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a)
+# 设置 JNI 库输出路径
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 
-add_library(llama SHARED IMPORTED)
-set_target_properties(llama PROPERTIES
-    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libllama.so
-)
+# 查找预编译的共享库
+find_library(LOG_LIB log)
 
-add_library(ggml SHARED IMPORTED)
-set_target_properties(ggml PROPERTIES
-    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libggml.so
-)
-
-add_library(ggml_base SHARED IMPORTED)
-set_target_properties(ggml_base PROPERTIES
-    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libggml-base.so
-)
-
-add_library(ggml_cpu SHARED IMPORTED)
-set_target_properties(ggml_cpu PROPERTIES
-    IMPORTED_LOCATION ${JNI_LIBS_DIR}/libggml-cpu-android_armv8.2_1.so
-)
-
-add_library(localaichat_jni SHARED
+# 添加本地 JNI 封装库
+add_library(
+    localaichat_jni
+    SHARED
     llama_jni.cpp
 )
 
-target_include_directories(localaichat_jni PRIVATE
-    ${CMAKE_SOURCE_DIR}
+# 链接预编译的 llama.cpp 库
+target_link_libraries(
+    localaichat_jni
+    ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libllama.so
+    ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libggml.so
+    ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libggml-base.so
+    ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libggml-cpu-android_armv8.2_1.so
+    ${LOG_LIB}
 )
 
-target_link_libraries(localaichat_jni
-    llama
-    ggml
-    ggml_base
-    ggml_cpu
-    android
-    log
-)
