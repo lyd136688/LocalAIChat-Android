@@ -154,17 +154,25 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
         val tagName = "v1.0.0native"
         val assetName = "native-libs-arm64.zip"
         
-        val zipUrl = "https://github.com/$repoOwner/$repoName/releases/download/$tagName/$assetName"
-        val zipFile = File(project.buildDir, "tmp/native-libs-arm64.zip")
-        
         jniLibsDir.mkdirs()
-        zipFile.parentFile.mkdirs()
         
-        println("Downloading native libraries from: $zipUrl")
         println("Token provided: ${githubToken.isNotEmpty()}")
         
         try {
-            downloadFile(zipUrl, zipFile, githubToken)
+            val downloadUrl = if (githubToken.isNotEmpty()) {
+                // 私有仓库：通过 API 获取下载链接
+                getAssetDownloadUrl(repoOwner, repoName, tagName, assetName, githubToken)
+            } else {
+                // 公开仓库：直接下载
+                "https://github.com/$repoOwner/$repoName/releases/download/$tagName/$assetName"
+            }
+            
+            println("Downloading from: $downloadUrl")
+            
+            val zipFile = File(project.buildDir, "tmp/native-libs-arm64.zip")
+            zipFile.parentFile.mkdirs()
+            
+            downloadFile(downloadUrl, zipFile, githubToken)
             extractZip(zipFile, jniLibsDir)
             markerFile.writeText("Native libraries extracted on ${System.currentTimeMillis()}")
             println("Native libraries downloaded and extracted successfully.")
@@ -172,6 +180,64 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
             println("ERROR: Failed to download native libraries: ${e.message}")
             throw e
         }
+    }
+    
+    private fun getAssetDownloadUrl(owner: String, repo: String, tag: String, assetName: String, token: String): String {
+        val apiUrl = "https://api.github.com/repos/$owner/$repo/releases/tags/$tag"
+        println("Fetching release info from API: $apiUrl")
+        
+        val connection = URL(apiUrl).openConnection() as HttpURLConnection
+        connection.setRequestProperty("User-Agent", "Gradle-LocalAIChat-Android")
+        connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+        connection.setRequestProperty("Authorization", "token $token")
+        connection.connectTimeout = 30000
+        connection.readTimeout = 120000
+        
+        val responseCode = connection.responseCode
+        if (responseCode != 200) {
+            val error = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+            throw RuntimeException("GitHub API returned $responseCode: $error")
+        }
+        
+        val response = connection.inputStream.bufferedReader().use { it.readText() }
+        
+        // 手动解析 JSON 找 assets
+        val assetsPattern = "\"assets\"\\s*:\\s*\\[(.*?)\\]"
+        val assetsRegex = Regex(assetsPattern, RegexOption.DOT_MATCHES_ALL)
+        val assetsMatch = assetsRegex.find(response)
+        
+        if (assetsMatch == null) {
+            println("Response preview: ${response.take(1000)}")
+            throw RuntimeException("Could not find assets in API response")
+        }
+        
+        val assetsSection = assetsMatch.groupValues[1]
+        
+        // 在 assets 中找匹配的 asset
+        val assetPattern = "\\{([^}]*)\"name\"\\s*:\\s*\"$assetName\"([^}]*)\\}"
+        val assetRegex = Regex(assetPattern, RegexOption.DOT_MATCHES_ALL)
+        val assetMatch = assetRegex.find(assetsSection)
+        
+        if (assetMatch == null) {
+            println("Available assets in response:")
+            val namePattern = "\"name\"\\s*:\\s*\"([^\"]+)\""
+            Regex(namePattern).findAll(assetsSection).forEach { 
+                println("  - ${it.groupValues[1]}")
+            }
+            throw RuntimeException("Asset '$assetName' not found in release")
+        }
+        
+        val assetBlock = assetMatch.value
+        
+        // 提取 browser_download_url
+        val urlPattern = "\"browser_download_url\"\\s*:\\s*\"([^\"]+)\""
+        val urlMatch = Regex(urlPattern).find(assetBlock)
+        
+        if (urlMatch == null) {
+            throw RuntimeException("Could not find download URL for asset")
+        }
+        
+        return urlMatch.groupValues[1]
     }
     
     private fun downloadFile(url: String, outputFile: File, token: String) {
@@ -216,13 +282,13 @@ abstract class DownloadAndExtractNativeLibs : DefaultTask() {
                     }
                 }
                 404 -> {
-                    throw RuntimeException("File not found (404). Check tag name and asset name.")
+                    throw RuntimeException("File not found (404)")
                 }
                 401 -> {
-                    throw RuntimeException("Unauthorized (401). Check GH_TOKEN has repo permission.")
+                    throw RuntimeException("Unauthorized (401)")
                 }
                 403 -> {
-                    throw RuntimeException("Forbidden (403). Token may lack required permissions.")
+                    throw RuntimeException("Forbidden (403)")
                 }
                 else -> {
                     throw RuntimeException("Unexpected HTTP response: $responseCode")
