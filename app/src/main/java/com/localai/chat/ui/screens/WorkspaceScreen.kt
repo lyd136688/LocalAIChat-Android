@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,13 +21,11 @@ fun WorkspaceScreen() {
                 Text("管理模型、设置与本地资源", color = Color(0xFF888888), fontSize = 12.sp)
             }
         }
-
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 模型设置
             item {
                 SettingsGroup("模型设置") {
                     SettingsItem("当前模型", "Llama-2-7B-Chat")
@@ -36,8 +34,6 @@ fun WorkspaceScreen() {
                     SettingsItem("线程数", "自动 (8)")
                 }
             }
-
-            // 对话设置
             item {
                 SettingsGroup("对话设置") {
                     SettingsItem("温度", "0.7")
@@ -45,8 +41,6 @@ fun WorkspaceScreen() {
                     SettingsItem("Top-P", "0.9")
                 }
             }
-
-            // 系统信息
             item {
                 SettingsGroup("系统信息") {
                     SettingsItem("应用版本", "1.0.0")
@@ -62,33 +56,23 @@ fun WorkspaceScreen() {
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column {
-        Text(
-            text = title,
-            color = Color(0xFF888888),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-        )
+        Text(title, color = Color(0xFF888888), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
             shape = RoundedCornerShape(12.dp)
-        ) {
-            Column {
-                content()
-            }
-        }
+        ) { Column { content() } }
     }
 }
 
 @Composable
 fun SettingsItem(label: String, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Text(text = value, color = Color(0xFF888888), fontSize = 12.sp)
     }
 }
+
