@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -21,17 +20,16 @@ data class Agent(
 )
 
 private val agents = listOf(
-    Agent("通用助手", "🤖", "default", "全能AI助手，适合日常对话"),
-    Agent("编程专家", "💻", "programmer", "专注编程、代码调试、技术问答"),
-    Agent("写作大师", "✍️", "writer", "擅长写作、文章润色、创作"),
+    Agent("通用助手", "🤖", "default", "全能AI助手"),
+    Agent("编程专家", "💻", "programmer", "专注编程与技术"),
+    Agent("写作大师", "✍️", "writer", "文章创作润色"),
     Agent("翻译官", "🌐", "translator", "多语言互译专家"),
-    Agent("学习导师", "📚", "tutor", "学习辅导、知识讲解"),
+    Agent("学习导师", "📚", "tutor", "学习辅导与答疑"),
     Agent("数据分析师", "📊", "analyst", "数据分析与可视化")
 )
 
 private val models = listOf(
     "Llama-2-7B-Chat (已下载)",
-    "Llama-2-13B-Chat",
     "Qwen-7B (推荐)",
     "Mistral-7B-Instruct",
     "Phi-2 (快速推理)"
@@ -58,24 +56,18 @@ fun MarketScreen() {
                 )
             }
         }
-
         if (tabIndex == 0) {
-            AgentMarket()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) { items(agents) { agent -> AgentCard(agent) } }
         } else {
-            ModelMarket()
-        }
-    }
-}
-
-@Composable
-fun AgentMarket() {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(agents) { agent ->
-            AgentCard(agent)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) { items(models) { model -> ModelCard(model) } }
         }
     }
 }
@@ -93,34 +85,13 @@ fun AgentCard(agent: Agent) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(agent.name, color = Color.White, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    agent.description,
-                    color = Color(0xFF888888),
-                    fontSize = 12.sp
-                )
+                Text(agent.description, color = Color(0xFF888888), fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
-                    onClick = { /* 加载此 Agent */ },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF6200EE)
-                    )
-                ) {
-                    Text("使用此Agent", fontSize = 12.sp)
-                }
+                    onClick = { },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF6200EE))
+                ) { Text("使用此Agent", fontSize = 12.sp) }
             }
-        }
-    }
-}
-
-@Composable
-fun ModelMarket() {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(models) { model ->
-            ModelCard(model)
         }
     }
 }
@@ -133,28 +104,19 @@ fun ModelCard(model: String) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("📦", fontSize = 28.sp)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(model.replace(" (已下载)", ""), color = Color.White, fontSize = 14.sp)
-                Text(
-                    "本地推理模型",
-                    color = Color(0xFF888888),
-                    fontSize = 11.sp
-                )
+                Text("本地推理模型", color = Color(0xFF888888), fontSize = 11.sp)
             }
             Button(
-                onClick = { /* 下载或加载 */ },
+                onClick = { },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDownloaded) Color(0xFF4CAF50) else Color(0xFF6200EE)
                 )
-            ) {
-                Text(if (isDownloaded) "加载" else "下载", fontSize = 12.sp)
-            }
+            ) { Text(if (isDownloaded) "加载" else "下载", fontSize = 12.sp) }
         }
     }
 }
