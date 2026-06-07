@@ -4,18 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Workspaces
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -34,10 +26,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            MaterialTheme {
-                Surface(color = Color(0xFF121212)) {
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                Surface(modifier = Modifier.fillMaxSize()) {
                     MainApp(chatViewModel)
                 }
             }
@@ -45,14 +36,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-sealed class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
-    object Chat : BottomNavItem("chat", "对话", Icons.Default.Chat)
-    object Services : BottomNavItem("services", "服务", Icons.Default.Search)
-    object Market : BottomNavItem("market", "市场", Icons.Default.Home)
-    object Workspace : BottomNavItem("workspace", "工作区", Icons.Default.Workspaces)
+sealed class BottomNavItem(val route: String, val label: String, val icon: String) {
+    object Chat : BottomNavItem("chat", "对话", "💬")
+    object Services : BottomNavItem("services", "服务", "🎯")
+    object Market : BottomNavItem("market", "市场", "🏪")
+    object Workspace : BottomNavItem("workspace", "工作区", "⚙️")
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun MainApp(chatViewModel: ChatViewModel) {
     val navController = rememberNavController()
@@ -64,17 +54,13 @@ fun MainApp(chatViewModel: ChatViewModel) {
     )
 
     Scaffold(
+        containerColor = Color(0xFF121212),
         bottomBar = {
-            BottomNavigation(
-                backgroundColor = Color(0xFF1E1E1E),
-                contentColor = Color.White
-            ) {
+            NavigationBar(containerColor = Color(0xFF1E1E1E)) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 items.forEach { item ->
-                    BottomNavigationItem(
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) },
+                    NavigationBarItem(
                         selected = currentRoute == item.route,
                         onClick = {
                             navController.navigate(item.route) {
@@ -82,8 +68,13 @@ fun MainApp(chatViewModel: ChatViewModel) {
                                 launchSingleTop = true
                             }
                         },
-                        selectedContentColor = Color(0xFF6200EE),
-                        unselectedContentColor = Color.Gray
+                        icon = { Text(item.icon, style = MaterialTheme.typography.titleMedium) },
+                        label = { Text(item.label, color = Color.White) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedTextColor = Color(0xFF6200EE),
+                            unselectedTextColor = Color.Gray,
+                            indicatorColor = Color(0xFF2A2A2A)
+                        )
                     )
                 }
             }
