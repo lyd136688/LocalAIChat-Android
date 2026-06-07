@@ -15,13 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.localai.chat.ui.model.ChatMessage
 import com.localai.chat.ui.viewmodel.ChatViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(viewModel: ChatViewModel) {
     var inputText by remember { mutableStateOf("") }
@@ -30,37 +28,27 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val currentAgent by viewModel.currentAgent.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header with agent info
-        Surface(
-            color = Color(0xFF1E1E1E),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        // Header
+        Surface(color = Color(0xFF1E1E1E), modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(44.dp)
                         .background(
                             color = Color(0xFF6200EE),
-                            shape = RoundedCornerShape(20.dp)
+                            shape = RoundedCornerShape(22.dp)
                         )
                 ) {
                     Text(
                         text = currentAgent.emoji,
-                        fontSize = 20.sp,
+                        fontSize = 22.sp,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(text = currentAgent.name, color = Color.White, fontSize = 16.sp)
-                    Text(
-                        text = currentAgent.description,
-                        color = Color(0xFF888888),
-                        fontSize = 12.sp
-                    )
+                    Text(text = currentAgent.description, color = Color(0xFF888888), fontSize = 12.sp)
                 }
             }
         }
@@ -79,20 +67,11 @@ fun ChatScreen(viewModel: ChatViewModel) {
             }
         }
 
-        // Input area
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(Color(0xFF333333))
-        )
+        // Divider
+        Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF333333)))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Input area
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
@@ -108,16 +87,17 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     }
                 ),
                 shape = RoundedCornerShape(24.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    textColor = Color.White,
-                    unfocusedBorderColor = Color(0xFF444444),
-                    focusedBorderColor = Color(0xFF6200EE),
-                    cursorColor = Color(0xFF6200EE)
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFF6200EE),
+                    unfocusedContainerColor = Color(0xFF1A1A1A),
+                    focusedContainerColor = Color(0xFF1A1A1A),
+                    unfocusedIndicatorColor = Color(0xFF444444),
+                    focusedIndicatorColor = Color(0xFF6200EE)
                 )
             )
-
             Spacer(modifier = Modifier.width(8.dp))
-
             IconButton(
                 onClick = {
                     if (inputText.isNotBlank() && !isLoading) {
@@ -128,16 +108,9 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Color(0xFF6200EE),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    CircularProgressIndicator(color = Color(0xFF6200EE), modifier = Modifier.size(24.dp))
                 } else {
-                    Icon(
-                        Icons.Default.Send,
-                        contentDescription = "发送",
-                        tint = Color(0xFF6200EE)
-                    )
+                    Icon(Icons.Default.Send, contentDescription = "发送", tint = Color(0xFF6200EE))
                 }
             }
         }
@@ -174,10 +147,10 @@ fun MessageBubble(message: ChatMessage) {
                     text = message.timestamp,
                     color = Color(0xFF888888),
                     fontSize = 10.sp,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.End)
                 )
             }
         }
     }
 }
+
