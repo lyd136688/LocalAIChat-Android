@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LocalAIChat</string>
+    <string name="app_name">LocalAI Chat</string>
     <string name="nav_service">服务</string>
     <string name="nav_market">市场</string>
     <string name="nav_chat">对话</string>
