@@ -12,31 +12,36 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Create directory structure
-      run: |
-        mkdir -p app/src/main/java/com/localai/chat/di
-        mkdir -p app/src/main/java/com/localai/chat/native
-        mkdir -p app/src/main/java/com/localai/chat/storage
-        mkdir -p app/src/main/java/com/localai/chat/data/database
-        mkdir -p app/src/main/java/com/localai/chat/data/model
-        mkdir -p app/src/main/java/com/localai/chat/utils
-        mkdir -p app/src/main/res/layout
-        mkdir -p app/src/main/res/drawable
-    
-    - name: Create all Kotlin files
-      run: |
-        cat > app/src/main/java/com/localai/chat/MyApplication.kt << 'EOF'
-package com.localai.chat
+    - name: Run setup script
+      run: python3 << 'PYEOF'
+import os
+
+dirs = [
+    'app/src/main/java/com/localai/chat/di',
+    'app/src/main/java/com/localai/chat/native',
+    'app/src/main/java/com/localai/chat/storage',
+    'app/src/main/java/com/localai/chat/data/database',
+    'app/src/main/java/com/localai/chat/data/model',
+    'app/src/main/java/com/localai/chat/utils',
+    'app/src/main/res/layout',
+    'app/src/main/res/drawable',
+]
+
+for d in dirs:
+    os.makedirs(d, exist_ok=True)
+
+files = {}
+
+files['app/src/main/java/com/localai/chat/MyApplication.kt'] = '''package com.localai.chat
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 class MyApplication : Application()
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/ChatActivity.kt << 'EOF'
-package com.localai.chat
+files['app/src/main/java/com/localai/chat/ChatActivity.kt'] = '''package com.localai.chat
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -59,10 +64,9 @@ class ChatActivity : ComponentActivity() {
         }
     }
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/di/AppModule.kt << 'EOF'
-package com.localai.chat.di
+files['app/src/main/java/com/localai/chat/di/AppModule.kt'] = '''package com.localai.chat.di
 
 import android.content.Context
 import androidx.room.Room
@@ -87,10 +91,9 @@ object AppModule {
         ).build()
     }
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/native/LlamaBridge.kt << 'EOF'
-package com.localai.chat.native
+files['app/src/main/java/com/localai/chat/native/LlamaBridge.kt'] = '''package com.localai.chat.native
 
 object LlamaBridge {
     init {
@@ -105,10 +108,9 @@ object LlamaBridge {
     external fun nativeFree(handle: Long)
     external fun nativeGetModelInfo(handle: Long): String
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/native/LlamaHelper.kt << 'EOF'
-package com.localai.chat.native
+files['app/src/main/java/com/localai/chat/native/LlamaHelper.kt'] = '''package com.localai.chat.native
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -131,18 +133,12 @@ class LlamaHelper {
         LlamaBridge.nativeGenerate(handle, prompt, maxTokens)
     }
     
-    fun unload() {
-        LlamaBridge.nativeUnloadModel(handle)
-    }
-    
-    fun free() {
-        LlamaBridge.nativeFree(handle)
-    }
+    fun unload() { LlamaBridge.nativeUnloadModel(handle) }
+    fun free() { LlamaBridge.nativeFree(handle) }
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/native/DeviceProfile.kt << 'EOF'
-package com.localai.chat.native
+files['app/src/main/java/com/localai/chat/native/DeviceProfile.kt'] = '''package com.localai.chat.native
 
 data class DeviceProfile(
     val name: String,
@@ -153,10 +149,9 @@ data class DeviceProfile(
     val useMmap: Boolean,
     val useMlock: Boolean
 )
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/native/DeviceProfileDetector.kt << 'EOF'
-package com.localai.chat.native
+files['app/src/main/java/com/localai/chat/native/DeviceProfileDetector.kt'] = '''package com.localai.chat.native
 
 import android.os.Build
 
@@ -177,30 +172,25 @@ object DeviceProfileDetector {
         }
     }
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/native/Dimensity9300Config.kt << 'EOF'
-package com.localai.chat.native
+files['app/src/main/java/com/localai/chat/native/Dimensity9300Config.kt'] = '''package com.localai.chat.native
 
 object Dimensity9300Config {
     fun getRecommendedQuantization(): String = "Q4_K_M"
     fun getMaxContextSize(): Int = 4096
     fun supportsBigLittle(): Boolean = true
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/native/InferenceScheduler.kt << 'EOF'
-package com.localai.chat.native
+files['app/src/main/java/com/localai/chat/native/InferenceScheduler.kt'] = '''package com.localai.chat.native
 
 class InferenceScheduler(private val llamaHelper: LlamaHelper) {
-    suspend fun generate(prompt: String): String {
-        return llamaHelper.generate(prompt)
-    }
+    suspend fun generate(prompt: String): String = llamaHelper.generate(prompt)
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/native/StreamingGenerator.kt << 'EOF'
-package com.localai.chat.native
+files['app/src/main/java/com/localai/chat/native/StreamingGenerator.kt'] = '''package com.localai.chat.native
 
 class StreamingGenerator(private val llamaHelper: LlamaHelper) {
     suspend fun generateStreaming(prompt: String, onToken: (String) -> Unit) {
@@ -208,21 +198,19 @@ class StreamingGenerator(private val llamaHelper: LlamaHelper) {
         onToken(result)
     }
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/storage/StorageConfig.kt << 'EOF'
-package com.localai.chat.storage
+files['app/src/main/java/com/localai/chat/storage/StorageConfig.kt'] = '''package com.localai.chat.storage
 
 object StorageConfig {
-    const val SAFE_MEMORY_THRESHOLD = 20 * 1024 * 1024L // 20MB
-    const val MAX_STORAGE_SIZE = 400L * 1024 * 1024 * 1024 // 400GB
+    const val SAFE_MEMORY_THRESHOLD = 20 * 1024 * 1024L
+    const val MAX_STORAGE_SIZE = 400L * 1024 * 1024 * 1024
     const val KV_CACHE_SIZE_DEFAULT = 512
     const val KV_CACHE_SIZE_HIGH_END = 2048
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/storage/ImageMemoryStorage.kt << 'EOF'
-package com.localai.chat.storage
+files['app/src/main/java/com/localai/chat/storage/ImageMemoryStorage.kt'] = '''package com.localai.chat.storage
 
 import android.content.Context
 import java.io.File
@@ -230,42 +218,35 @@ import java.io.File
 class ImageMemoryStorage(context: Context) {
     private val storageDir = File(context.filesDir, "image_memories")
     
-    init {
-        storageDir.mkdirs()
-    }
+    init { storageDir.mkdirs() }
     
     fun saveMemory(content: String, tags: List<String>): String {
-        val file = File(storageDir, "memory_${System.currentTimeMillis()}.txt")
+        val file = File(storageDir, "memory_" + System.currentTimeMillis() + ".txt")
         file.writeText(content)
         return file.absolutePath
     }
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/storage/MemoryOverflowHandler.kt << 'EOF'
-package com.localai.chat.storage
+files['app/src/main/java/com/localai/chat/storage/MemoryOverflowHandler.kt'] = '''package com.localai.chat.storage
 
 class MemoryOverflowHandler {
     fun checkAndCleanup(currentSize: Long) {
         if (currentSize > StorageConfig.MAX_STORAGE_SIZE * 0.7) {
-            // Cleanup logic
+            // cleanup logic
         }
     }
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/storage/SessionMemoryManager.kt << 'EOF'
-package com.localai.chat.storage
+files['app/src/main/java/com/localai/chat/storage/SessionMemoryManager.kt'] = '''package com.localai.chat.storage
 
 class SessionMemoryManager {
-    fun compressOldMessages(messages: List<String>): List<String> {
-        return messages.takeLast(10)
-    }
+    fun compressOldMessages(messages: List<String>): List<String> = messages.takeLast(10)
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/database/ChatMessageEntity.kt << 'EOF'
-package com.localai.chat.data.database
+files['app/src/main/java/com/localai/chat/data/database/ChatMessageEntity.kt'] = '''package com.localai.chat.data.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -279,10 +260,9 @@ data class ChatMessageEntity(
     val content: String,
     val timestamp: Long = System.currentTimeMillis()
 )
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/database/ChatMessageDao.kt << 'EOF'
-package com.localai.chat.data.database
+files['app/src/main/java/com/localai/chat/data/database/ChatMessageDao.kt'] = '''package com.localai.chat.data.database
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -299,10 +279,9 @@ interface ChatMessageDao {
     @Query("DELETE FROM chat_messages WHERE sessionId = :sessionId")
     suspend fun deleteBySession(sessionId: String)
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/database/ChatSessionEntity.kt << 'EOF'
-package com.localai.chat.data.database
+files['app/src/main/java/com/localai/chat/data/database/ChatSessionEntity.kt'] = '''package com.localai.chat.data.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -315,10 +294,9 @@ data class ChatSessionEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/database/ChatSessionDao.kt << 'EOF'
-package com.localai.chat.data.database
+files['app/src/main/java/com/localai/chat/data/database/ChatSessionDao.kt'] = '''package com.localai.chat.data.database
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -339,19 +317,15 @@ interface ChatSessionDao {
     @Query("DELETE FROM chat_sessions WHERE id = :id")
     suspend fun delete(id: String)
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/database/AppDatabase.kt << 'EOF'
-package com.localai.chat.data.database
+files['app/src/main/java/com/localai/chat/data/database/AppDatabase.kt'] = '''package com.localai.chat.data.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [
-        ChatMessageEntity::class,
-        ChatSessionEntity::class
-    ],
+    entities = [ChatMessageEntity::class, ChatSessionEntity::class],
     version = 1,
     exportSchema = false
 )
@@ -359,37 +333,30 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun chatSessionDao(): ChatSessionDao
 }
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/database/MemoryDao.kt << 'EOF'
-package com.localai.chat.data.database
+files['app/src/main/java/com/localai/chat/data/database/MemoryDao.kt'] = '''package com.localai.chat.data.database
 
 import androidx.room.Dao
 
 @Dao
 interface MemoryDao
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/database/MessageDao.kt << 'EOF'
-package com.localai.chat.data.database
+files['app/src/main/java/com/localai/chat/data/database/MessageDao.kt'] = '''package com.localai.chat.data.database
 
 import androidx.room.Dao
 
 @Dao
 interface MessageDao
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/model/ChatMessage.kt << 'EOF'
-package com.localai.chat.data.model
+files['app/src/main/java/com/localai/chat/data/model/ChatMessage.kt'] = '''package com.localai.chat.data.model
 
-data class ChatMessage(
-    val role: String,
-    val content: String
-)
-EOF
+data class ChatMessage(val role: String, val content: String)
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/model/ImageMemory.kt << 'EOF'
-package com.localai.chat.data.model
+files['app/src/main/java/com/localai/chat/data/model/ImageMemory.kt'] = '''package com.localai.chat.data.model
 
 import kotlinx.serialization.Serializable
 
@@ -400,36 +367,27 @@ data class ImageMemory(
     val tags: List<String>,
     val createdAt: Long
 )
-EOF
+'''
 
-        cat > app/src/main/java/com/localai/chat/data/model/MemoryItem.kt << 'EOF'
-package com.localai.chat.data.model
+files['app/src/main/java/com/localai/chat/data/model/MemoryItem.kt'] = '''package com.localai.chat.data.model
 
-data class MemoryItem(
-    val id: String,
-    val content: String
-)
-EOF
+data class MemoryItem(val id: String, val content: String)
+'''
 
-        cat > app/src/main/java/com/localai/chat/utils/MemoryManager.kt << 'EOF'
-package com.localai.chat.utils
+files['app/src/main/java/com/localai/chat/utils/MemoryManager.kt'] = '''package com.localai.chat.utils
 
 class MemoryManager {
     fun getMemoriesByTag(tag: String): List<String> = emptyList()
 }
-EOF
-    
-    - name: Create resource files
-      run: |
-        cat > app/src/main/res/values/strings.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
+'''
+
+files['app/src/main/res/values/strings.xml'] = '''<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LocalAIChat</string>
 </resources>
-EOF
+'''
 
-        cat > app/src/main/res/layout/activity_chat.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
+files['app/src/main/res/layout/activity_chat.xml'] = '''<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -443,10 +401,9 @@ EOF
         android:textColor="@color/text_primary"
         android:textSize="24sp" />
 </FrameLayout>
-EOF
+'''
 
-        cat > app/src/main/res/layout/activity_main.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
+files['app/src/main/res/layout/activity_main.xml'] = '''<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -460,48 +417,57 @@ EOF
         android:textColor="@color/text_primary"
         android:textSize="24sp" />
 </FrameLayout>
-EOF
+'''
 
-        cat > app/src/main/res/drawable/bg_button_accent.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
+files['app/src/main/res/drawable/bg_button_accent.xml'] = '''<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@color/button_accent" />
     <corners android:radius="8dp" />
 </shape>
-EOF
+'''
 
-        cat > app/src/main/res/drawable/bg_button_primary.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
+files['app/src/main/res/drawable/bg_button_primary.xml'] = '''<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@color/button_primary" />
     <corners android:radius="8dp" />
 </shape>
-EOF
+'''
 
-        cat > app/src/main/res/drawable/bg_card.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
+files['app/src/main/res/drawable/bg_card.xml'] = '''<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@color/background_card" />
     <corners android:radius="12dp" />
 </shape>
-EOF
+'''
 
-        cat > app/src/main/res/drawable/bg_input.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
+files['app/src/main/res/drawable/bg_input.xml'] = '''<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@color/background_input" />
     <corners android:radius="8dp" />
 </shape>
-EOF
+'''
+
+for path, content in files.items():
+    with open(path, 'w') as f:
+        f.write(content)
+    print("Created: " + path)
+
+print("All files created successfully!")
+PYEOF
     
     - name: Commit and push
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git add .
-        git diff --staged --quiet || git commit -m "Setup project files"
-        git push
+        git add -A
+        if git diff --staged --quiet; then
+            echo "No changes to commit"
+        else
+            git commit -m "Setup project files"
+            git push
+        fi
+
