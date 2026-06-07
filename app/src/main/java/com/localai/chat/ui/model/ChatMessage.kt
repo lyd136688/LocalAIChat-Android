@@ -5,3 +5,4 @@ data class ChatMessage(
     val isUser: Boolean,
     val timestamp: String
 )
+
