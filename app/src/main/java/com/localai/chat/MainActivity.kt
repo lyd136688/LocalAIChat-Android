@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
     private fun showStoragePermissionDialog() {
         AlertDialog.Builder(this)
             .setTitle("需要存储权限")
-            .setMessage("请授予"所有文件访问权限"，以便保存模型和记忆数据。")
+            .setMessage("请授予所有文件访问权限，以便保存模型和记忆数据。")
             .setPositiveButton("去设置") { _, _ ->
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
                 intent.data = Uri.parse("package:$packageName")
@@ -135,3 +135,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
