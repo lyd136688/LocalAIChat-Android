@@ -5,10 +5,10 @@ import android.os.Bundle
 import android.widget.CompoundButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -16,53 +16,57 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
+        val btnBack: ImageView = findViewById(R.id.btn_back)
+        btnBack.setOnClickListener { finish() }
 
-        findViewById<LinearLayout>(R.id.item_model_provider).setOnClickListener {
-            showModelProviderDialog()
-        }
+        val itemModelProvider: LinearLayout = findViewById(R.id.item_model_provider)
+        itemModelProvider.setOnClickListener { showModelProviderDialog() }
 
-        findViewById<LinearLayout>(R.id.item_scene_config).setOnClickListener {
-            showSceneConfigDialog()
-        }
+        val itemSceneConfig: LinearLayout = findViewById(R.id.item_scene_config)
+        itemSceneConfig.setOnClickListener { showSceneConfigDialog() }
 
-        findViewById<LinearLayout>(R.id.item_local_model).setOnClickListener {
+        val itemLocalModel: LinearLayout = findViewById(R.id.item_local_model)
+        itemLocalModel.setOnClickListener {
             Toast.makeText(this, "本地模型管理功能开发中", Toast.LENGTH_SHORT).show()
         }
 
-        findViewById<LinearLayout>(R.id.item_workspace_memory).setOnClickListener {
-            showWorkspaceMemoryDialog()
-        }
+        val itemWorkspaceMemory: LinearLayout = findViewById(R.id.item_workspace_memory)
+        itemWorkspaceMemory.setOnClickListener { showWorkspaceMemoryDialog() }
 
-        findViewById<LinearLayout>(R.id.item_mcp_tools).setOnClickListener {
-            showMcpToolsDialog()
-        }
+        val itemMcpTools: LinearLayout = findViewById(R.id.item_mcp_tools)
+        itemMcpTools.setOnClickListener { showMcpToolsDialog() }
 
-        findViewById<LinearLayout>(R.id.item_alpine).setOnClickListener {
+        val itemAlpine: LinearLayout = findViewById(R.id.item_alpine)
+        itemAlpine.setOnClickListener {
             Toast.makeText(this, "Alpine环境功能开发中", Toast.LENGTH_SHORT).show()
         }
 
-        findViewById<LinearLayout>(R.id.item_alarm).setOnClickListener {
+        val itemAlarm: LinearLayout = findViewById(R.id.item_alarm)
+        itemAlarm.setOnClickListener {
             Toast.makeText(this, "闹钟设置功能开发中", Toast.LENGTH_SHORT).show()
         }
 
-        val switchLocal = findViewById<Switch>(R.id.switch_local_service)
-        val switchHide = findViewById<Switch>(R.id.switch_background_hide)
-        val switchMemory = findViewById<Switch>(R.id.switch_workspace_memory)
-
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+
+        val switchLocal: SwitchCompat = findViewById(R.id.switch_local_service)
+        val switchHide: SwitchCompat = findViewById(R.id.switch_background_hide)
+        val switchMemory: SwitchCompat = findViewById(R.id.switch_workspace_memory)
+
         switchLocal.isChecked = prefs.getBoolean("local_service_enabled", false)
         switchHide.isChecked = prefs.getBoolean("background_hide", false)
         switchMemory.isChecked = prefs.getBoolean("workspace_memory_enabled", true)
 
         switchLocal.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
-            getSharedPreferences("app_settings", MODE_PRIVATE).edit().putBoolean("local_service_enabled", isChecked).apply()
+            getSharedPreferences("app_settings", MODE_PRIVATE)
+                .edit().putBoolean("local_service_enabled", isChecked).apply()
         }
         switchHide.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
-            getSharedPreferences("app_settings", MODE_PRIVATE).edit().putBoolean("background_hide", isChecked).apply()
+            getSharedPreferences("app_settings", MODE_PRIVATE)
+                .edit().putBoolean("background_hide", isChecked).apply()
         }
         switchMemory.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
-            getSharedPreferences("app_settings", MODE_PRIVATE).edit().putBoolean("workspace_memory_enabled", isChecked).apply()
+            getSharedPreferences("app_settings", MODE_PRIVATE)
+                .edit().putBoolean("workspace_memory_enabled", isChecked).apply()
         }
     }
 
