@@ -2,59 +2,66 @@ package com.localai.chat
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.widget.CompoundButton
+import android.widget.LinearLayout
+import android.widget.Switch
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.localai.chat.databinding.ActivitySettingsBinding
 
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivitySettingsBinding
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivitySettingsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        setContentView(R.layout.activity_settings)
 
-        loadSettings()
+        findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
 
-        binding.btnBack.setOnClickListener { finish() }
-
-        binding.itemModelProvider.setOnClickListener { showModelProviderDialog() }
-        binding.itemSceneConfig.setOnClickListener { showSceneConfigDialog() }
-        binding.itemLocalModel.setOnClickListener {
+        findViewById<LinearLayout>(R.id.item_model_provider).setOnClickListener {
+            showModelProviderDialog()
+        }
+        findViewById<LinearLayout>(R.id.item_scene_config).setOnClickListener {
+            showSceneConfigDialog()
+        }
+        findViewById<LinearLayout>(R.id.item_local_model).setOnClickListener {
             Toast.makeText(this, "本地模型管理功能开发中", Toast.LENGTH_SHORT).show()
         }
-        binding.itemWorkspaceMemory.setOnClickListener { showWorkspaceMemoryDialog() }
-        binding.itemMcpTools.setOnClickListener { showMcpToolsDialog() }
-        binding.itemAlpine.setOnClickListener {
+        findViewById<LinearLayout>(R.id.item_workspace_memory).setOnClickListener {
+            showWorkspaceMemoryDialog()
+        }
+        findViewById<LinearLayout>(R.id.item_mcp_tools).setOnClickListener {
+            showMcpToolsDialog()
+        }
+        findViewById<LinearLayout>(R.id.item_alpine).setOnClickListener {
             Toast.makeText(this, "Alpine环境功能开发中", Toast.LENGTH_SHORT).show()
         }
-        binding.itemAlarm.setOnClickListener {
+        findViewById<LinearLayout>(R.id.item_alarm).setOnClickListener {
             Toast.makeText(this, "闹钟设置功能开发中", Toast.LENGTH_SHORT).show()
         }
 
-        binding.switchLocalService.setOnCheckedChangeListener { _, isChecked ->
+        val switchLocal = findViewById<Switch>(R.id.switch_local_service)
+        val switchHide = findViewById<Switch>(R.id.switch_background_hide)
+        val switchMemory = findViewById<Switch>(R.id.switch_workspace_memory)
+
+        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+        switchLocal.isChecked = prefs.getBoolean("local_service_enabled", false)
+        switchHide.isChecked = prefs.getBoolean("background_hide", false)
+        switchMemory.isChecked = prefs.getBoolean("workspace_memory_enabled", true)
+
+        switchLocal.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
             getSharedPreferences("app_settings", MODE_PRIVATE)
                 .edit().putBoolean("local_service_enabled", isChecked).apply()
         }
-
-        binding.switchBackgroundHide.setOnCheckedChangeListener { _, isChecked ->
+        switchHide.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
             getSharedPreferences("app_settings", MODE_PRIVATE)
                 .edit().putBoolean("background_hide", isChecked).apply()
         }
-
-        binding.switchWorkspaceMemory.setOnCheckedChangeListener { _, isChecked ->
+        switchMemory.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
             getSharedPreferences("app_settings", MODE_PRIVATE)
                 .edit().putBoolean("workspace_memory_enabled", isChecked).apply()
         }
-    }
-
-    private fun loadSettings() {
-        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        binding.switchLocalService.isChecked = prefs.getBoolean("local_service_enabled", false)
-        binding.switchBackgroundHide.isChecked = prefs.getBoolean("background_hide", false)
-        binding.switchWorkspaceMemory.isChecked = prefs.getBoolean("workspace_memory_enabled", true)
     }
 
     private fun showModelProviderDialog() {
@@ -99,3 +106,4 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 }
+
