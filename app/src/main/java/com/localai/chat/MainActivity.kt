@@ -1,94 +1,60 @@
 package com.localai.chat
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import com.localai.chat.ui.screens.ChatScreen
-import com.localai.chat.ui.screens.ServicesScreen
-import com.localai.chat.ui.screens.MarketScreen
-import com.localai.chat.ui.screens.WorkspaceScreen
-import com.localai.chat.ui.viewmodel.ChatViewModel
-import dagger.hilt.android.AndroidEntryPoint
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.localai.chat.fragments.ChatFragment
+import com.localai.chat.fragments.MarketFragment
+import com.localai.chat.fragments.ServiceFragment
+import com.localai.chat.fragments.WorkspaceFragment
 
-@AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
-    private val chatViewModel = ChatViewModel()
+    private val chatFragment = ChatFragment()
+    private val serviceFragment = ServiceFragment()
+    private val marketFragment = MarketFragment()
+    private val workspaceFragment = WorkspaceFragment()
+
+    private var activeFragment: Fragment = chatFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MainApp(chatViewModel)
-                }
+        setContentView(R.layout.activity_main)
+
+        val navView = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .add(R.id.fragment_container, chatFragment, "chat")
+                .add(R.id.fragment_container, serviceFragment, "service").hide(serviceFragment)
+                .add(R.id.fragment_container, marketFragment, "market").hide(marketFragment)
+                .add(R.id.fragment_container, workspaceFragment, "workspace").hide(workspaceFragment)
+                .commit()
+            activeFragment = chatFragment
+        }
+
+        navView.selectedItemId = R.id.nav_chat
+
+        navView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_service -> switchFragment(serviceFragment)
+                R.id.nav_market -> switchFragment(marketFragment)
+                R.id.nav_chat -> switchFragment(chatFragment)
+                R.id.nav_workspace -> switchFragment(workspaceFragment)
             }
+            true
+        }
+    }
+
+    private fun switchFragment(target: Fragment) {
+        if (target != activeFragment) {
+            supportFragmentManager.beginTransaction()
+                .hide(activeFragment)
+                .show(target)
+                .commit()
+            activeFragment = target
         }
     }
 }
 
-sealed class BottomNavItem(val route: String, val label: String, val icon: String) {
-    object Chat : BottomNavItem("chat", "对话", "💬")
-    object Services : BottomNavItem("services", "服务", "🎯")
-    object Market : BottomNavItem("market", "市场", "🏪")
-    object Workspace : BottomNavItem("workspace", "工作区", "⚙️")
-}
-
-@Composable
-fun MainApp(chatViewModel: ChatViewModel) {
-    val navController = rememberNavController()
-    val items = listOf(
-        BottomNavItem.Chat,
-        BottomNavItem.Services,
-        BottomNavItem.Market,
-        BottomNavItem.Workspace
-    )
-
-    Scaffold(
-        containerColor = Color(0xFF121212),
-        bottomBar = {
-            NavigationBar(containerColor = Color(0xFF1E1E1E)) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-                items.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentRoute == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
-                            }
-                        },
-                        icon = { Text(item.icon, style = MaterialTheme.typography.titleMedium) },
-                        label = { Text(item.label, color = Color.White) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedTextColor = Color(0xFF6200EE),
-                            unselectedTextColor = Color.Gray,
-                            indicatorColor = Color(0xFF2A2A2A)
-                        )
-                    )
-                }
-            }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = BottomNavItem.Chat.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(BottomNavItem.Chat.route) { ChatScreen(chatViewModel) }
-            composable(BottomNavItem.Services.route) { ServicesScreen() }
-            composable(BottomNavItem.Market.route) { MarketScreen() }
-            composable(BottomNavItem.Workspace.route) { WorkspaceScreen() }
-        }
-    }
-}
