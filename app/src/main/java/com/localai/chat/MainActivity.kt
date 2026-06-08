@@ -1,5 +1,6 @@
 package com.localai.chat
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
@@ -8,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
@@ -50,11 +52,7 @@ class MainActivity : AppCompatActivity() {
         topBar.addView(ImageView(this).apply {
             setImageResource(android.R.drawable.ic_menu_preferences)
             setColorFilter(Color.WHITE)
-            setOnClickListener {
-                android.content.Intent(this@MainActivity, SettingsActivity::class.java).also {
-                    startActivity(it)
-                }
-            }
+            setOnClickListener { safeStartActivity("SettingsActivity") }
         }, LinearLayout.LayoutParams(pad16 * 2, pad16 * 2))
 
         topBar.addView(TextView(this).apply {
@@ -68,11 +66,7 @@ class MainActivity : AppCompatActivity() {
         topBar.addView(ImageView(this).apply {
             setImageResource(android.R.drawable.ic_menu_save)
             setColorFilter(Color.WHITE)
-            setOnClickListener {
-                android.content.Intent(this@MainActivity, MemoryCenterActivity::class.java).also {
-                    startActivity(it)
-                }
-            }
+            setOnClickListener { safeStartActivity("MemoryCenterActivity") }
         }, LinearLayout.LayoutParams(pad16 * 2, pad16 * 2))
 
         root.addView(topBar, LinearLayout.LayoutParams(
@@ -91,7 +85,6 @@ class MainActivity : AppCompatActivity() {
 
         // 底部导航
         val navView = BottomNavigationView(this).apply {
-            id = android.R.id.tabs
             setBackgroundColor(Color.parseColor("#1E1E1E"))
             itemIconTintList = android.content.res.ColorStateList.valueOf(
                 Color.parseColor("#CCCCCC")
@@ -108,12 +101,11 @@ class MainActivity : AppCompatActivity() {
 
             setOnItemSelectedListener { item ->
                 when (item.itemId) {
-                    PAGE_CHAT -> showPage(PAGE_CHAT)
-                    PAGE_SERVICE -> showPage(PAGE_SERVICE)
-                    PAGE_MARKET -> showPage(PAGE_MARKET)
-                    PAGE_WORKSPACE -> showPage(PAGE_WORKSPACE)
+                    PAGE_CHAT, PAGE_SERVICE, PAGE_MARKET, PAGE_WORKSPACE -> {
+                        showPage(item.itemId); true
+                    }
+                    else -> false
                 }
-                true
             }
         }
         root.addView(navView, LinearLayout.LayoutParams(
@@ -123,6 +115,15 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(root)
         showPage(PAGE_CHAT)
+    }
+
+    private fun safeStartActivity(className: String) {
+        try {
+            val cls = Class.forName("com.localai.chat.$className")
+            startActivity(Intent(this, cls))
+        } catch (e: Exception) {
+            Toast.makeText(this, "功能开发中: $className", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showPage(page: Int) {
@@ -150,7 +151,7 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
 
             addView(TextView(this@MainActivity).apply {
-                text = "💬 对话页面"
+                text = "💬 对话"
                 setTextColor(Color.WHITE)
                 textSize = 20f
                 gravity = Gravity.CENTER
@@ -177,9 +178,7 @@ class MainActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER
                 setPadding(pad16 * 2, pad16, pad16 * 2, pad16)
                 setBackgroundColor(Color.parseColor("#4A90D9"))
-                setOnClickListener {
-                    startActivity(android.content.Intent(this@MainActivity, ChatActivity::class.java))
-                }
+                setOnClickListener { safeStartActivity("ChatActivity") }
             }, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -251,14 +250,11 @@ class MainActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER
                 setPadding(pad16 * 2, pad16, pad16 * 2, pad16)
                 setBackgroundColor(Color.parseColor("#4A90D9"))
-                setPadding(pad16 * 2, pad16, pad16 * 2, pad16)
                 layoutParams = ViewGroup.MarginLayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).also { it.topMargin = pad16 }
-                setOnClickListener {
-                    startActivity(android.content.Intent(this@MainActivity, WorkspaceActivity::class.java))
-                }
+                setOnClickListener { safeStartActivity("WorkspaceActivity") }
             })
         }
     }
