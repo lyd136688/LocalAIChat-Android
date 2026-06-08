@@ -27,9 +27,15 @@ class HardwareDetector(private val context: Context) {
         val availableRamMB = mi.availMem / (1024 * 1024)
         val cpuCores = Runtime.getRuntime().availableProcessors()
         val cpuAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"
+
         val hasGpu = try {
-            am.deviceConfigurationInfo.glEsVersion >= 3.0f
-        } catch (_: Throwable) { false }
+            val glVersion = am.deviceConfigurationInfo.glEsVersion
+            val major = glVersion?.split(".")?.firstOrNull()?.toIntOrNull() ?: 0
+            major >= 3
+        } catch (e: Throwable) {
+            false
+        }
+
         val socName = Build.HARDWARE
 
         val recommendedModelSize = when {
@@ -53,99 +59,89 @@ class HardwareDetector(private val context: Context) {
     }
 
     fun getRecommendedModels(source: String = "HuggingFace"): List<ModelInfo> {
-        val allModels = listOf(
+        val models = listOf(
             ModelInfo(
-                id = "HuggingFaceTB/SmolLM2-135M-Instruct-GGUF",
-                name = "SmolLM2-135M Q4_K_M",
+                id = "huggingface/smollm-135m-instruct",
+                name = "SmolLM2-135M",
                 params = "135M",
                 quantization = "Q4_K_M",
-                size = 95.4f,
+                size = 95f,
                 sizeUnit = "MB",
                 license = "Apache-2.0",
-                tags = listOf("LLM", "Chat", "GGUF", "Q4_K_M", "轻量"),
+                tags = listOf("轻量", "快速", "演示"),
                 source = source,
                 description = "极小尺寸的演示级模型，运行极快，适合低配设备。"
             ),
             ModelInfo(
-                id = "Qwen/Qwen2-0.5B-Instruct-GGUF",
-                name = "Qwen2-0.5B Q4_K_M",
-                params = "0.5B",
+                id = "Qwen/Qwen2.5-0.5B-Instruct",
+                name = "Qwen2.5-0.5B",
+                params = "500M",
                 quantization = "Q4_K_M",
-                size = 400f,
+                size = 350f,
                 sizeUnit = "MB",
                 license = "Apache-2.0",
-                tags = listOf("LLM", "Chat", "GGUF", "Q4_K_M", "中文"),
+                tags = listOf("轻量", "中文", "快速"),
                 source = source,
-                description = "超小模型，中文友好，速度快。"
+                description = "超小模型，中文友好，响应迅速。"
             ),
             ModelInfo(
-                id = "Qwen/Qwen2-1.5B-Instruct-GGUF",
-                name = "Qwen2-1.5B Q4_K_M",
+                id = "Qwen/Qwen2.5-1.5B-Instruct",
+                name = "Qwen2.5-1.5B",
                 params = "1.5B",
                 quantization = "Q4_K_M",
                 size = 1100f,
                 sizeUnit = "MB",
                 license = "Apache-2.0",
-                tags = listOf("LLM", "Chat", "GGUF", "Q4_K_M", "中文"),
+                tags = listOf("中文", "均衡", "推荐"),
                 source = source,
-                description = "通义千问2 的 1.5B 小版本，中文友好，适合低端设备。"
+                description = "通义千问2.5 小版本，中文能力优秀，性价比高。"
             ),
             ModelInfo(
-                id = "Qwen/Qwen2-7B-Instruct-GGUF",
-                name = "Qwen2-7B Q4_K_M",
+                id = "Qwen/Qwen2.5-7B-Instruct",
+                name = "Qwen2.5-7B",
                 params = "7B",
                 quantization = "Q4_K_M",
                 size = 4800f,
                 sizeUnit = "MB",
                 license = "Apache-2.0",
-                tags = listOf("LLM", "Chat", "GGUF", "Q4_K_M", "中文", "高性能"),
+                tags = listOf("中文", "高质量", "推理强"),
                 source = source,
-                description = "通义千问2 中文大模型，中文理解与生成能力出色。"
+                description = "通义千问2.5 中文大模型，通用场景表现出色。"
             ),
             ModelInfo(
-                id = "meta-llama/Llama-2-7b-chat-hf-GGUF",
-                name = "Llama-2-7B-Chat Q4_K_M",
+                id = "meta-llama/Llama-2-7b-chat-hf",
+                name = "Llama-2-7B-Chat",
                 params = "7B",
                 quantization = "Q4_K_M",
                 size = 4200f,
                 sizeUnit = "MB",
                 license = "Llama 2",
-                tags = listOf("LLM", "Chat", "GGUF", "Q4_K_M", "英文", "通用"),
+                tags = listOf("英文", "通用"),
                 source = source,
-                description = "Meta 发布的开源对话模型，通用领域表现稳定，适合多轮对话。"
+                description = "Meta 发布的开源对话模型，通用领域稳定。"
             ),
             ModelInfo(
-                id = "mistralai/Mistral-7B-Instruct-v0.2-GGUF",
-                name = "Mistral-7B-Instruct Q4_K_M",
+                id = "mistralai/Mistral-7B-Instruct-v0.2",
+                name = "Mistral-7B-Instruct",
                 params = "7B",
                 quantization = "Q4_K_M",
                 size = 4100f,
                 sizeUnit = "MB",
                 license = "Apache-2.0",
-                tags = listOf("LLM", "Chat", "GGUF", "Q4_K_M", "推理强", "快速"),
+                tags = listOf("英文", "推理", "快速"),
                 source = source,
-                description = "Mistral 7B 指令调优版本，推理能力强，响应速度快。"
-            ),
-            ModelInfo(
-                id = "microsoft/phi-2-GGUF",
-                name = "Phi-2 Q4_K_M",
-                params = "2.7B",
-                quantization = "Q4_K_M",
-                size = 1600f,
-                sizeUnit = "MB",
-                license = "MIT",
-                tags = listOf("LLM", "Chat", "GGUF", "Q4_K_M", "小模型", "推理"),
-                source = source,
-                description = "微软发布的 2.7B 小型语言模型，在推理与代码任务上表现突出。"
+                description = "Mistral 7B 指令调优版本，推理能力强。"
             )
         )
 
         val deviceInfo = getDeviceInfo()
-        val thresholdMB = deviceInfo.availableRamMB * 0.6f
+        val availableRamMB = deviceInfo.availableRamMB
+        val thresholdMB = if (availableRamMB > 0) availableRamMB * 0.6f else 2000f
 
-        return allModels.filter { model ->
+        return models.filter { model ->
             val sizeMB = if (model.sizeUnit == "GB") model.size * 1024 else model.size
             sizeMB < thresholdMB
-        }.ifEmpty { allModels.take(3) }
+        }.ifEmpty { models.take(3) }
     }
 }
+
