@@ -18,41 +18,34 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         val btnBack = findViewById<ImageView>(R.id.btn_back)
+        val itemModelProvider = findViewById<LinearLayout>(R.id.item_model_provider)
+        val itemSceneConfig = findViewById<LinearLayout>(R.id.item_scene_config)
+        val itemLocalModel = findViewById<LinearLayout>(R.id.item_local_model)
+        val itemWorkspaceMemory = findViewById<LinearLayout>(R.id.item_workspace_memory)
+        val itemMcpTools = findViewById<LinearLayout>(R.id.item_mcp_tools)
+        val itemAlpine = findViewById<LinearLayout>(R.id.item_alpine)
+        val itemAlarm = findViewById<LinearLayout>(R.id.item_alarm)
+        val switchLocal = findViewById<SwitchCompat>(R.id.switch_local_service)
+        val switchHide = findViewById<SwitchCompat>(R.id.switch_background_hide)
+        val switchMemory = findViewById<SwitchCompat>(R.id.switch_workspace_memory)
+
         btnBack.setOnClickListener { finish() }
 
-        val itemModelProvider = findViewById<LinearLayout>(R.id.item_model_provider)
         itemModelProvider.setOnClickListener { showModelProviderDialog() }
-
-        val itemSceneConfig = findViewById<LinearLayout>(R.id.item_scene_config)
         itemSceneConfig.setOnClickListener { showSceneConfigDialog() }
-
-        val itemLocalModel = findViewById<LinearLayout>(R.id.item_local_model)
         itemLocalModel.setOnClickListener {
             Toast.makeText(this, "本地模型管理功能开发中", Toast.LENGTH_SHORT).show()
         }
-
-        val itemWorkspaceMemory = findViewById<LinearLayout>(R.id.item_workspace_memory)
         itemWorkspaceMemory.setOnClickListener { showWorkspaceMemoryDialog() }
-
-        val itemMcpTools = findViewById<LinearLayout>(R.id.item_mcp_tools)
         itemMcpTools.setOnClickListener { showMcpToolsDialog() }
-
-        val itemAlpine = findViewById<LinearLayout>(R.id.item_alpine)
         itemAlpine.setOnClickListener {
             Toast.makeText(this, "Alpine环境功能开发中", Toast.LENGTH_SHORT).show()
         }
-
-        val itemAlarm = findViewById<LinearLayout>(R.id.item_alarm)
         itemAlarm.setOnClickListener {
             Toast.makeText(this, "闹钟设置功能开发中", Toast.LENGTH_SHORT).show()
         }
 
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-
-        val switchLocal = findViewById<SwitchCompat>(R.id.switch_local_service)
-        val switchHide = findViewById<SwitchCompat>(R.id.switch_background_hide)
-        val switchMemory = findViewById<SwitchCompat>(R.id.switch_workspace_memory)
-
         switchLocal.isChecked = prefs.getBoolean("local_service_enabled", false)
         switchHide.isChecked = prefs.getBoolean("background_hide", false)
         switchMemory.isChecked = prefs.getBoolean("workspace_memory_enabled", true)
@@ -115,3 +108,4 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 }
+
