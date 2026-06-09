@@ -9,7 +9,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -17,39 +22,18 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.localai.chat.fragments.ChatFragment
-import com.localai.chat.fragments.MarketFragment
-import com.localai.chat.fragments.ServiceFragment
-import com.localai.chat.fragments.WorkspaceFragment
 
 class MainActivity : AppCompatActivity() {
 
-    private val fragments = mutableMapOf<String, Fragment>()
+    private val fragmentMap = mutableMapOf<String, Fragment>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        initFragments()
-        setupHeader()
-        setupBottomNavigation()
-        checkPermissions()
-
-        if (savedInstanceState == null) {
-            switchFragment("chat")
-        }
-    }
-
-    private fun initFragments() {
-        fragments["service"] = ServiceFragment()
-        fragments["market"] = MarketFragment()
-        fragments["chat"] = ChatFragment()
-        fragments["workspace"] = WorkspaceFragment()
-    }
-
-    private fun setupHeader() {
         val ivSettings = findViewById<ImageView>(R.id.iv_settings)
         val ivMemory = findViewById<ImageView>(R.id.iv_memory)
+        val navView = findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
         ivSettings.setOnClickListener {
             val intent = Intent()
@@ -62,10 +46,6 @@ class MainActivity : AppCompatActivity() {
             intent.component = ComponentName(this@MainActivity, "com.localai.chat.MemoryCenterActivity")
             startActivity(intent)
         }
-    }
-
-    private fun setupBottomNavigation() {
-        val navView = findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
         navView.setOnItemSelectedListener { item ->
             when (item.itemId) {
@@ -76,13 +56,41 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+
+        if (savedInstanceState == null) {
+            switchFragment("chat")
+        }
+
+        checkPermissions()
     }
 
     private fun switchFragment(tag: String) {
-        val fragment = fragments[tag] ?: return
+        val fragment = getOrCreateFragment(tag) ?: return
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment, tag)
             .commitAllowingStateLoss()
+    }
+
+    private fun getOrCreateFragment(tag: String): Fragment? {
+        val cached = fragmentMap[tag]
+        if (cached != null) return cached
+
+        val fqn = when (tag) {
+            "service" -> "com.localai.chat.fragments.ServiceFragment"
+            "market" -> "com.localai.chat.fragments.MarketFragment"
+            "chat" -> "com.localai.chat.fragments.ChatFragment"
+            "workspace" -> "com.localai.chat.fragments.WorkspaceFragment"
+            else -> null
+        } ?: return SimplePlaceholderFragment.newInstance(tag)
+
+        return try {
+            val cls = Class.forName(fqn)
+            val instance = cls.getDeclaredConstructor().newInstance() as Fragment
+            fragmentMap[tag] = instance
+            instance
+        } catch (e: Throwable) {
+            SimplePlaceholderFragment.newInstance(tag)
+        }
     }
 
     private fun checkPermissions() {
@@ -136,6 +144,58 @@ class MainActivity : AppCompatActivity() {
             val denied = grantResults.filter { it != PackageManager.PERMISSION_GRANTED }
             if (denied.isNotEmpty()) {
                 Toast.makeText(this, "部分权限被拒绝，功能可能受限", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
+class SimplePlaceholderFragment : Fragment() {
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        val context = inflater.context
+        val title = arguments?.getString(ARG_TAG, "页面") ?: "页面"
+
+        val root = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(android.graphics.Color.parseColor("#121212"))
+            gravity = Gravity.CENTER
+            setPadding(64, 64, 64, 64)
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        val titleView = TextView(context).apply {
+            text = title
+            textSize = 24f
+            setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+            gravity = Gravity.CENTER
+        }
+
+        val hintView = TextView(context).apply {
+            text = "此页面正在开发中"
+            textSize = 14f
+            setTextColor(android.graphics.Color.parseColor("#888888"))
+            gravity = Gravity.CENTER
+            setPadding(0, 24, 0, 0)
+        }
+
+        root.addView(titleView)
+        root.addView(hintView)
+        return root
+    }
+
+    companion object {
+        private const val ARG_TAG = "tag"
+
+        fun newInstance(tag: String): SimplePlaceholderFragment {
+            return SimplePlaceholderFragment().apply {
+                arguments = Bundle().apply { putString(ARG_TAG, tag) }
             }
         }
     }
