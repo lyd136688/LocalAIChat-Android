@@ -10,14 +10,156 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.localai.chat.adapters.MemoryListAdapter
-import com.localai.chat.data.models.MemoryItem
 import kotlinx.coroutines.launch
 
+// ------ 本地数据类（不依赖 data.models 包） ------
+data class LocalMemoryItem(
+    val id: String,
+    val content: String,
+    val type: String,
+    val source: String,
+    val createdAt: Long,
+    val tags: List<String>,
+    val relevanceScore: Float
+)
+
+// ------ 自包含 Adapter（不依赖 adapters 包） ------
+class InlineMemoryAdapter(
+    private val onDeleteClick: (LocalMemoryItem) -> Unit,
+    private val onRecallClick: (LocalMemoryItem) -> Unit
+) : RecyclerView.Adapter<InlineMemoryAdapter.ViewHolder>() {
+
+    private var list: List<LocalMemoryItem> = emptyList()
+
+    fun setData(data: List<LocalMemoryItem>) {
+        this.list = data
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val context = parent.context
+        val density = context.resources.displayMetrics.density
+        val dp8 = (8 * density).toInt()
+        val dp12 = (12 * density).toInt()
+        val dp16 = (16 * density).toInt()
+
+        val container = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(dp12, dp12, dp12, dp12)
+            setBackgroundColor(android.graphics.Color.parseColor("#1E1E1E"))
+            val params = RecyclerView.LayoutParams(
+                RecyclerView.LayoutParams.MATCH_PARENT,
+                RecyclerView.LayoutParams.WRAP_CONTENT
+            )
+            params.bottomMargin = dp8
+            layoutParams = params
+        }
+
+        val content = TextView(context).apply {
+            id = android.view.View.generateViewId()
+            textSize = 14f
+            setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+            maxLines = 4
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+
+        val meta = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setPadding(0, dp8, 0, 0)
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val source = TextView(context).apply {
+            id = android.view.View.generateViewId()
+            textSize = 11f
+            setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                0,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val time = TextView(context).apply {
+            id = android.view.View.generateViewId()
+            textSize = 11f
+            setTextColor(android.graphics.Color.parseColor("#888888"))
+            setPadding(dp16, 0, dp16, 0)
+        }
+
+        val btnRecall = ImageView(context).apply {
+            id = android.view.View.generateViewId()
+            setImageResource(android.R.drawable.ic_menu_recent_history)
+            setPadding(dp8, 0, dp8, 0)
+            contentDescription = "唤起"
+        }
+
+        val btnDelete = ImageView(context).apply {
+            id = android.view.View.generateViewId()
+            setImageResource(android.R.drawable.ic_menu_delete)
+            setPadding(dp8, 0, dp8, 0)
+            contentDescription = "删除"
+        }
+
+        meta.addView(source)
+        meta.addView(time)
+        meta.addView(btnRecall)
+        meta.addView(btnDelete)
+
+        container.addView(content)
+        container.addView(meta)
+
+        val holder = ViewHolder(container, content, source, time, btnRecall, btnDelete)
+        container.tag = holder
+        return holder
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(list[position])
+    }
+
+    override fun getItemCount() = list.size
+
+    inner class ViewHolder(
+        itemView: View,
+        private val content: TextView,
+        private val source: TextView,
+        private val time: TextView,
+        private val btnRecall: ImageView,
+        private val btnDelete: ImageView
+    ) : RecyclerView.ViewHolder(itemView) {
+
+        private var currentItem: LocalMemoryItem? = null
+
+        init {
+            btnRecall.setOnClickListener { currentItem?.let { onRecallClick(it) } }
+            btnDelete.setOnClickListener { currentItem?.let { onDeleteClick(it) } }
+        }
+
+        fun bind(item: LocalMemoryItem) {
+            currentItem = item
+            content.text = item.content.take(200)
+            source.text = "来源: ${item.source}"
+            time.text = formatTime(item.createdAt)
+        }
+
+        private fun formatTime(ts: Long): String {
+            val formatter = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
+            return formatter.format(java.util.Date(ts))
+        }
+    }
+}
+
+// ------ Activity 主体 ------
 class MemoryCenterActivity : AppCompatActivity() {
 
     private lateinit var btnBack: ImageView
@@ -31,7 +173,7 @@ class MemoryCenterActivity : AppCompatActivity() {
     private lateinit var tvEmptyDesc: TextView
     private lateinit var rvMemories: RecyclerView
 
-    private lateinit var memoryAdapter: MemoryListAdapter
+    private lateinit var memoryAdapter: InlineMemoryAdapter
     private var isSearchMode: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,9 +194,9 @@ class MemoryCenterActivity : AppCompatActivity() {
         tabAll.text = "全部记忆"
         tabSearch.text = "语义检索"
 
-        memoryAdapter = MemoryListAdapter(
+        memoryAdapter = InlineMemoryAdapter(
             onDeleteClick = { memory -> deleteMemory(memory) },
-            onArchiveClick = { memory -> recallMemory(memory) }
+            onRecallClick = { memory -> recallMemory(memory) }
         )
 
         rvMemories.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
@@ -110,8 +252,13 @@ class MemoryCenterActivity : AppCompatActivity() {
     private fun loadAllMemories() {
         progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
-            val manager = (application as MyApplication).memoryManager
-            val memories = manager.getAllMemoriesOrderedByTime()
+            val memories = try {
+                val app = application as? MyApplication
+                if (app != null) app.memoryManager.getAllMemoriesOrderedByTime()
+                else emptyList()
+            } catch (e: Throwable) {
+                emptyList()
+            }
             showResult(memories, isSearch = false, query = null)
             progressBar.visibility = View.GONE
         }
@@ -120,14 +267,19 @@ class MemoryCenterActivity : AppCompatActivity() {
     private fun semanticSearch(query: String) {
         progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
-            val manager = (application as MyApplication).memoryManager
-            val memories = manager.searchMemoriesByVector(query, topK = 20)
+            val memories = try {
+                val app = application as? MyApplication
+                if (app != null) app.memoryManager.searchMemoriesByVector(query, topK = 20)
+                else emptyList()
+            } catch (e: Throwable) {
+                emptyList()
+            }
             showResult(memories, isSearch = true, query = query)
             progressBar.visibility = View.GONE
         }
     }
 
-    private fun showResult(memories: List<MemoryItem>, isSearch: Boolean, query: String?) {
+    private fun showResult(memories: List<LocalMemoryItem>, isSearch: Boolean, query: String?) {
         if (memories.isEmpty()) {
             emptyState.visibility = View.VISIBLE
             rvMemories.visibility = View.GONE
@@ -145,9 +297,13 @@ class MemoryCenterActivity : AppCompatActivity() {
         }
     }
 
-    private fun deleteMemory(memory: MemoryItem) {
+    private fun deleteMemory(memory: LocalMemoryItem) {
         lifecycleScope.launch {
-            (application as MyApplication).memoryManager.deleteMemory(memory.id)
+            try {
+                val app = application as? MyApplication
+                app?.memoryManager?.deleteMemory(memory.id)
+            } catch (e: Throwable) { /* ignore */ }
+
             if (isSearchMode) {
                 val q = etSearch.text.toString().trim()
                 if (q.isNotEmpty()) semanticSearch(q) else loadAllMemories()
@@ -157,12 +313,9 @@ class MemoryCenterActivity : AppCompatActivity() {
         }
     }
 
-    private fun recallMemory(memory: MemoryItem) {
+    private fun recallMemory(memory: LocalMemoryItem) {
         val hint = if (memory.content.length > 30) memory.content.take(30) + "…" else memory.content
-        android.widget.Toast.makeText(
-            this,
-            "已唤起记忆：$hint",
-            android.widget.Toast.LENGTH_SHORT
-        ).show()
+        Toast.makeText(this, "已唤起记忆：$hint", Toast.LENGTH_SHORT).show()
     }
 }
+
