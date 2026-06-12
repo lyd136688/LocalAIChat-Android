@@ -88,9 +88,9 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showWorkspaceMemoryDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Workspace记忆配置")
-            .setMessage("启用后，对话内容将被存储并支持语义检索。\n\n当前状态：已启用")
-            .setPositiveButton("管理记忆") { _, _ ->
+            .setTitle("Workspace 记忆配置")
+            .setMessage("开启后，对话内容会保存为向量索引，支持语义检索。\n\n· 存储方式：本地向量数据库\n· 检索方式：余弦相似度（TOP-K）\n· 不做压缩记忆，保持原文语义完整\n\n当前状态：已启用")
+            .setPositiveButton("查看记忆") { _, _ ->
                 val intent = Intent()
                 intent.component = ComponentName(this@SettingsActivity, "com.localai.chat.MemoryCenterActivity")
                 startActivity(intent)
@@ -101,8 +101,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showMcpToolsDialog() {
         AlertDialog.Builder(this)
-            .setTitle("MCP工具管理")
-            .setMessage("可添加、启动/停止远程MCP服务。\n\n可用工具：\n· web_search\n· calculator\n· file_manager\n· terminal")
+            .setTitle("MCP 工具管理")
+            .setMessage("可添加、启动/停止远程 MCP 服务。\n\n可用工具：\n· web_search（网络搜索）\n· calculator（计算器）\n· file_manager（文件管理）\n· terminal（终端）")
             .setPositiveButton("添加工具", null)
             .setNegativeButton("关闭", null)
             .show()
