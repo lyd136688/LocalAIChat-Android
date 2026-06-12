@@ -40,10 +40,10 @@ class HardwareDetector(private val context: Context) {
         val cpuCores = Runtime.getRuntime().availableProcessors()
         val cpuAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"
 
+        // glEsVersion 是 Android packed float（GLES 2.0 = 0x20000，GLES 3.0 = 0x30000）
         val hasGpu = try {
             val glVersion = am.deviceConfigurationInfo.glEsVersion
-            val major = glVersion?.split(".")?.firstOrNull()?.toIntOrNull() ?: 0
-            major >= 3
+            glVersion >= 0x30000f
         } catch (e: Throwable) {
             false
         }
@@ -147,8 +147,8 @@ class HardwareDetector(private val context: Context) {
         )
 
         val deviceInfo = getDeviceInfo()
-        val availableRamMB = deviceInfo.availableRamMB
-        val thresholdMB = if (availableRamMB > 0) availableRamMB * 0.6f else 2000f
+        val availableMB = deviceInfo.availableRamMB
+        val thresholdMB = if (availableMB > 0) availableMB * 0.6f else 2000f
 
         return models.filter { model: LocalModelInfo ->
             val sizeMB = if (model.sizeUnit == "GB") model.size * 1024 else model.size
