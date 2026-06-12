@@ -117,20 +117,28 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-// ============ 内联 Fragment 实现（不依赖 fragments 包） ============
+// ====== 自包含 Inline Fragment（不依赖 fragments 包） ======
 
-class ChatInlineFragment : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+abstract class BaseInlineFragment : Fragment() {
+
+    protected fun buildSimplePage(
+        titleText: String,
+        descText: String,
+        buttonText: String? = null,
+        buttonColor: String = "#4A90E2",
+        onButtonClick: ((View) -> Unit)? = null
     ): View {
-        val context = inflater.context
+        val context = requireContext()
+        val density = context.resources.displayMetrics.density
+
         val root = android.widget.LinearLayout(context).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             setBackgroundColor(android.graphics.Color.parseColor("#121212"))
-            setPadding(64, 64, 64, 64)
             gravity = Gravity.CENTER
+            setPadding(
+                (64 * density).toInt(), (64 * density).toInt(),
+                (64 * density).toInt(), (64 * density).toInt()
+            )
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -138,178 +146,108 @@ class ChatInlineFragment : Fragment() {
         }
 
         val title = TextView(context).apply {
-            text = "聊天对话"
+            text = titleText
             textSize = 22f
             setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
             gravity = Gravity.CENTER
         }
 
         val desc = TextView(context).apply {
-            text = "点击右上角 ➜ 进入 ChatActivity 开始对话。\n对话内容将自动存入向量记忆库，支持语义检索，不做压缩归档。"
+            text = descText
             textSize = 14f
             setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
             gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 0)
-        }
-
-        val btnStart = android.widget.Button(context).apply {
-            text = "进入聊天"
-            setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-            setBackgroundColor(android.graphics.Color.parseColor("#4A90E2"))
-            val density = resources.displayMetrics.density
-            val padding = (12 * density).toInt()
-            setPadding(padding, padding, padding, padding)
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, (32 * density).toInt(), 0, 0)
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-            layoutParams = params
-            setOnClickListener {
-                val intent = Intent(requireContext(), ChatActivity::class.java)
-                startActivity(intent)
-            }
+            setPadding(0, (24 * density).toInt(), 0, 0)
         }
 
         root.addView(title)
         root.addView(desc)
-        root.addView(btnStart)
+
+        if (buttonText != null) {
+            val btn = android.widget.Button(context).apply {
+                text = buttonText
+                setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+                setBackgroundColor(android.graphics.Color.parseColor(buttonColor))
+                val pad = (12 * density).toInt()
+                setPadding(pad, pad, pad, pad)
+                val params = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = (32 * density).toInt()
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+                layoutParams = params
+                setOnClickListener(onButtonClick)
+            }
+            root.addView(btn)
+        }
         return root
     }
 }
 
-class ServiceInlineFragment : Fragment() {
+class ChatInlineFragment : BaseInlineFragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val context = inflater.context
-        val root = android.widget.LinearLayout(context).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(android.graphics.Color.parseColor("#121212"))
-            setPadding(64, 64, 64, 64)
-            gravity = Gravity.CENTER
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+        return buildSimplePage(
+            titleText = "聊天对话",
+            descText = "所有对话在本机推理，保护隐私。\n对话内容自动存入向量记忆库，支持语义检索，不做压缩归档。",
+            buttonText = "进入聊天",
+            buttonColor = "#4A90E2"
+        ) {
+            val intent = Intent()
+            intent.component = ComponentName(requireContext(), "com.localai.chat.ChatActivity")
+            startActivity(intent)
         }
-
-        val title = TextView(context).apply {
-            text = "服务场景"
-            textSize = 22f
-            setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-            gravity = Gravity.CENTER
-        }
-        val desc = TextView(context).apply {
-            text = "智能问答 / 代码助手 / 写作润色 / 翻译 / 数据分析 / 学习辅导 / 会议总结 / 邮件写作\n\n根据选择的场景，AI 会以相应的语气与策略为你服务。"
-            textSize = 14f
-            setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
-            gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 0)
-        }
-
-        val btn = android.widget.Button(context).apply {
-            text = "进入场景聊天"
-            setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-            setBackgroundColor(android.graphics.Color.parseColor("#7ED321"))
-            val density = resources.displayMetrics.density
-            val padding = (12 * density).toInt()
-            setPadding(padding, padding, padding, padding)
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, (32 * density).toInt(), 0, 0)
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-            layoutParams = params
-            setOnClickListener {
-                val intent = Intent(requireContext(), ChatActivity::class.java)
-                intent.putExtra("SERVICE_TITLE", "默认场景")
-                startActivity(intent)
-            }
-        }
-
-        root.addView(title)
-        root.addView(desc)
-        root.addView(btn)
-        return root
     }
 }
 
-class MarketInlineFragment : Fragment() {
+class ServiceInlineFragment : BaseInlineFragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val context = inflater.context
-        val root = android.widget.LinearLayout(context).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(android.graphics.Color.parseColor("#121212"))
-            setPadding(64, 64, 64, 64)
-            gravity = Gravity.CENTER
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+        return buildSimplePage(
+            titleText = "服务场景",
+            descText = "智能问答 / 代码助手 / 写作润色 / 翻译\n数据分析 / 学习辅导 / 会议总结 / 邮件写作\n\n根据选择的场景，AI 会以相应的语气与策略为你服务。",
+            buttonText = "进入场景聊天",
+            buttonColor = "#7ED321"
+        ) {
+            val intent = Intent()
+            intent.component = ComponentName(requireContext(), "com.localai.chat.ChatActivity")
+            intent.putExtra("SERVICE_TITLE", "默认场景")
+            startActivity(intent)
         }
-        val title = TextView(context).apply {
-            text = "模型市场"
-            textSize = 22f
-            setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-            gravity = Gravity.CENTER
-        }
-        val desc = TextView(context).apply {
-            text = "浏览开源模型，按设备硬件推荐合适的模型版本。"
-            textSize = 14f
-            setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
-            gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 0)
-        }
-        root.addView(title)
-        root.addView(desc)
-        return root
     }
 }
 
-class WorkspaceInlineFragment : Fragment() {
+class MarketInlineFragment : BaseInlineFragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val context = inflater.context
-        val root = android.widget.LinearLayout(context).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(android.graphics.Color.parseColor("#121212"))
-            setPadding(64, 64, 64, 64)
-            gravity = Gravity.CENTER
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
-        val title = TextView(context).apply {
-            text = "工作区"
-            textSize = 22f
-            setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-            gravity = Gravity.CENTER
-        }
-        val desc = TextView(context).apply {
-            text = "查看本地工作目录中的文件与资源。"
-            textSize = 14f
-            setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
-            gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 0)
-        }
-        root.addView(title)
-        root.addView(desc)
-        return root
+        return buildSimplePage(
+            titleText = "模型市场",
+            descText = "浏览开源模型，按设备硬件推荐合适的模型大小。"
+        )
+    }
+}
+
+class WorkspaceInlineFragment : BaseInlineFragment() {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return buildSimplePage(
+            titleText = "工作区",
+            descText = "查看本地工作目录中的文件与资源。"
+        )
     }
 }
 
