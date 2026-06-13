@@ -7,45 +7,47 @@
         android:orientation="horizontal" android:gravity="center_vertical"
         android:padding="8dp" android:background="#1E1E1E">
         <ImageView android:id="@+id/btn_back" android:layout_width="40dp"
-            android:layout_height="40dp" android:src="@drawable/ic_back"
-            android:padding="8dp" />
+            android:layout_height="40dp" android:src="@drawable/ic_back" android:padding="8dp" />
         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:text="记忆中心（向量检索）"
-            android:textColor="#FFFFFF" android:textSize="16sp" android:gravity="center" />
+            android:layout_weight="1" android:text="记忆中心"
+            android:textColor="#FFFFFF" android:textSize="18sp" android:gravity="center" />
     </LinearLayout>
 
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="所有记忆以向量形式存储，支持语义检索，不做压缩归档。"
-        android:textColor="#CCCCCC" android:textSize="13sp"
-        android:padding="16dp" android:gravity="center" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+        <EditText android:id="@+id/et_search" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:background="@drawable/bg_input" android:textColor="#FFFFFF"
+            android:textColorHint="#8888888"
+            android:hint="输入关键词或问题进行向量搜索"
+            android:padding="12dp" android:textSize="14sp"
+            android:imeOptions="actionSearch" android:inputType="text" />
+        <Button android:id="@+id/btn_search" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="搜索"
+            android:textColor="#FFFFFF" android:background="@drawable/bg_button_accent"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center" android:padding="8dp">
         <TextView android:id="@+id/tab_short_term" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:text="全部记忆"
-            android:textColor="#FFFFFF" android:textSize="14sp"
-            android:padding="8dp" android:background="@drawable/bg_tab_selected" />
+            android:layout_height="wrap_content" android:text="短期记忆"
+            android:textColor="#FFFFFF" android:textSize="14sp" android:padding="8dp"
+            android:background="@drawable/bg_tab_selected" />
         <TextView android:id="@+id/tab_long_term" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:text="语义检索"
-            android:textColor="#FFFFFF" android:textSize="14sp"
-            android:padding="8dp" android:layout_marginStart="16dp" />
+            android:layout_height="wrap_content" android:text="长期记忆"
+            android:textColor="#FFFFFF" android:textSize="14sp" android:padding="8dp"
+            android:layout_marginStart="16dp" />
+        <TextView android:id="@+id/tab_search_result" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="搜索结果"
+            android:textColor="#FFFFFF" android:textSize="14sp" android:padding="8dp"
+            android:layout_marginStart="16dp" android:visibility="gone" />
     </LinearLayout>
 
-    <LinearLayout android:id="@+id/search_bar" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:orientation="horizontal"
-        android:gravity="center_vertical" android:padding="8dp"
-        android:visibility="gone">
-        <EditText android:id="@+id/et_memory_search" android:layout_width="0dp"
-            android:layout_height="40dp" android:layout_weight="1"
-            android:hint="输入关键词进行语义检索（如：Android报错）"
-            android:textColor="#FFFFFF" android:textColorHint="#888888"
-            android:background="@drawable/bg_input" android:padding="8dp"
-            android:imeOptions="actionSearch" />
-        <Button android:id="@+id/btn_memory_search" android:layout_width="wrap_content"
-            android:layout_height="40dp" android:text="检索"
-            android:textColor="#FFFFFF" android:background="@drawable/bg_button_accent"
-            android:layout_marginStart="8dp" />
-    </LinearLayout>
+    <TextView android:id="@+id/tv_stats" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="向量化检索已启用 · 内容不压缩"
+        android:textColor="#888888" android:textSize="12sp"
+        android:gravity="center" android:padding="4dp" />
 
     <ProgressBar android:id="@+id/progress_bar" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_gravity="center"
@@ -53,13 +55,11 @@
 
     <LinearLayout android:id="@+id/empty_state" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:orientation="vertical"
-        android:gravity="center" android:padding="32dp"
-        android:background="@drawable/bg_card" android:layout_margin="16dp"
-        android:visibility="gone">
+        android:gravity="center" android:padding="32dp" android:background="@drawable/bg_card"
+        android:layout_margin="16dp" android:visibility="gone">
         <TextView android:id="@+id/tv_empty_title" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="还没有记忆"
-            android:textColor="#FFFFFF" android:textSize="16sp"
-            android:layout_gravity="center_horizontal" />
+            android:textColor="#FFFFFF" android:textSize="16sp" />
         <TextView android:id="@+id/tv_empty_desc" android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="对话中的信息会以向量形式存入本地记忆库。"
@@ -69,6 +69,6 @@
 
     <androidx.recyclerview.widget.RecyclerView android:id="@+id/rv_memories"
         android:layout_width="match_parent" android:layout_height="match_parent"
-        android:padding="8dp" />
+        android:padding="8dp" android:clipToPadding="false" />
 </LinearLayout>
 
